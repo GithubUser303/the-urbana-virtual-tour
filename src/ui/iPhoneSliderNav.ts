@@ -107,12 +107,10 @@ export class iPhoneSliderNav {
   private activeIndex = 0;
   private isDragging = false;
   private startPointerX = 0;
-  private startThumbX = 0;
-  private currentThumbX = 0;
-  private trackWidth = 0;
-  private itemWidths: number[] = [];
-  private snapPoints: number[] = [];
+  private startThumbLeft = 0;
+  private currentThumbLeft = 0;
   private candidateIndex = 0;
+  private resizeObserver?: ResizeObserver;
 
   constructor() {
     this.tourState = TourState.get();
@@ -215,53 +213,114 @@ export class iPhoneSliderNav {
       }
     });
 
-    // Compute geometry on layout readiness & resize
-    requestAnimationFrame(() => {
-      this.recalculateSnapPoints();
-      this.snapToIndex(0, false);
-    });
+    // Real-time responsive layout tracking
+    this.initResponsiveObservers();
+  }
 
-    window.addEventListener('resize', () => {
-      this.recalculateSnapPoints();
-      this.snapToIndex(this.activeIndex, false);
+  private initResponsiveObservers(): void {
+    const realign = () => {
+      if (!this.isDragging) {
+        this.realignActiveThumb(false);
+      }
+    };
+
+    // 1. Check layout once fonts are loaded
+    if ('fonts' in document) {
+      document.fonts.ready.then(() => {
+        requestAnimationFrame(realign);
+      });
+    }
+
+    // 2. Continuous ResizeObserver on track container
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => {
+        realign();
+      });
+      this.resizeObserver.observe(this.track);
+    }
+
+    // 3. Window resize and orientation changes
+    window.addEventListener('resize', realign);
+    window.addEventListener('orientationchange', realign);
+
+    // Initial frame alignment
+    requestAnimationFrame(() => {
+      this.realignActiveThumb(false);
     });
   }
 
-  private recalculateSnapPoints(): void {
+  /**
+   * Re-aligns the thumb to the current active item based on live DOM coordinates
+   */
+  private realignActiveThumb(animated = false): void {
+    const targetEl = this.itemElements[this.activeIndex];
+    if (!targetEl) return;
+
     const trackRect = this.track.getBoundingClientRect();
-    this.trackWidth = trackRect.width;
+    const itemRect = targetEl.getBoundingClientRect();
 
-    this.snapPoints = [];
-    this.itemWidths = [];
+    if (trackRect.width === 0 || itemRect.width === 0) return;
 
-    this.itemElements.forEach((el) => {
+    const targetLeft = itemRect.left - trackRect.left;
+    const targetWidth = itemRect.width;
+
+    this.currentThumbLeft = targetLeft;
+    this.setThumbGeometry(targetLeft, targetWidth, animated);
+  }
+
+  private setThumbGeometry(left: number, width: number, animated = true): void {
+    if (animated) {
+      this.thumb.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.25), width 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.25)';
+    } else {
+      this.thumb.style.transition = 'none';
+    }
+    this.thumb.style.width = `${width}px`;
+    this.thumb.style.transform = `translateX(${left}px)`;
+  }
+
+  private getItemBounds(): { minLeft: number; maxLeft: number; centers: number[]; widths: number[] } {
+    const trackRect = this.track.getBoundingClientRect();
+    const centers: number[] = [];
+    const widths: number[] = [];
+    let minLeft = 0;
+    let maxLeft = 0;
+
+    this.itemElements.forEach((el, i) => {
       const rect = el.getBoundingClientRect();
-      const relativeCenter = rect.left - trackRect.left + rect.width / 2;
-      this.snapPoints.push(relativeCenter);
-      this.itemWidths.push(rect.width);
+      const left = rect.left - trackRect.left;
+      const center = left + rect.width / 2;
+      centers.push(center);
+      widths.push(rect.width);
+
+      if (i === 0) {
+        minLeft = left;
+      }
+      // Constraint: bathroom is index 5 (last room)
+      if (i === this.itemElements.length - 1) {
+        maxLeft = left;
+      }
     });
 
-    // Size the thumb to match the active item
-    if (this.itemWidths[this.activeIndex]) {
-      const w = Math.max(this.itemWidths[this.activeIndex] + 8, 48);
-      this.thumb.style.width = `${w}px`;
-    }
+    return { minLeft, maxLeft, centers, widths };
   }
 
   private initDragHandlers(): void {
+    let bounds = this.getItemBounds();
+
     const onPointerDown = (e: PointerEvent) => {
-      // Ignore right click
+      // Ignore non-primary click
       if (e.button !== 0 && e.pointerType === 'mouse') return;
 
-      // Do not initiate slider drag if interacting with the map button or divider
+      // Do not initiate slider drag if interacting with the map button
       const target = e.target as HTMLElement | null;
-      if (target?.closest('.iphone-location-btn, .iphone-slider-divider')) {
+      if (target?.closest('.iphone-location-btn')) {
         return;
       }
 
+      bounds = this.getItemBounds();
       this.isDragging = true;
       this.startPointerX = e.clientX;
-      this.startThumbX = this.currentThumbX;
+      this.startThumbLeft = this.currentThumbLeft;
       this.candidateIndex = this.activeIndex;
 
       this.thumb.classList.add('dragging');
@@ -280,25 +339,23 @@ export class iPhoneSliderNav {
       if (!this.isDragging) return;
 
       const deltaX = e.clientX - this.startPointerX;
-      let targetX = this.startThumbX + deltaX;
+      let targetLeft = this.startThumbLeft + deltaX;
 
       // Strict constraints: cannot drag further left than Living Room (index 0)
-      // or further right than Bathroom (last room index)
-      const minX = this.snapPoints[0] ?? 30;
-      const maxX = this.snapPoints[this.snapPoints.length - 1] ?? (this.trackWidth - 30);
+      // or further right than Bathroom (index 5)
+      targetLeft = Math.max(bounds.minLeft, Math.min(bounds.maxLeft, targetLeft));
+      this.currentThumbLeft = targetLeft;
 
-      // Clamp strictly to [minX, maxX]
-      targetX = Math.max(minX, Math.min(maxX, targetX));
+      // Calculate center of thumb at current position
+      const activeWidth = bounds.widths[this.candidateIndex] || 48;
+      const thumbCenter = targetLeft + activeWidth / 2;
 
-      this.currentThumbX = targetX;
-      this.updateThumbPosition(targetX, false);
-
-      // Find nearest snap point candidate as thumb glides
+      // Find nearest snap candidate
       let closestIdx = 0;
       let minDistance = Infinity;
 
-      this.snapPoints.forEach((pt, i) => {
-        const dist = Math.abs(pt - targetX);
+      bounds.centers.forEach((center, i) => {
+        const dist = Math.abs(center - thumbCenter);
         if (dist < minDistance) {
           minDistance = dist;
           closestIdx = i;
@@ -309,6 +366,10 @@ export class iPhoneSliderNav {
         this.candidateIndex = closestIdx;
         this.highlightCandidate(closestIdx);
       }
+
+      // Smoothly interpolate thumb width to match current candidate item snugly
+      const candidateWidth = bounds.widths[closestIdx] || 48;
+      this.setThumbGeometry(targetLeft, candidateWidth, false);
     };
 
     const onPointerUp = (e: PointerEvent) => {
@@ -333,15 +394,6 @@ export class iPhoneSliderNav {
     this.track.addEventListener('pointerdown', onPointerDown);
   }
 
-  private updateThumbPosition(centerX: number, animated = true): void {
-    if (animated) {
-      this.thumb.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.25), width 0.3s ease';
-    } else {
-      this.thumb.style.transition = 'none';
-    }
-    this.thumb.style.transform = `translateX(${centerX}px) translateX(-50%)`;
-  }
-
   private highlightCandidate(index: number): void {
     this.itemElements.forEach((el, i) => {
       if (i === index) {
@@ -358,19 +410,6 @@ export class iPhoneSliderNav {
     this.activeIndex = index;
     this.candidateIndex = index;
 
-    if (this.snapPoints.length === 0) {
-      this.recalculateSnapPoints();
-    }
-
-    const snapX = this.snapPoints[index] ?? 40;
-    this.currentThumbX = snapX;
-
-    // Adjust thumb width to match item snugly
-    const itemWidth = this.itemWidths[index] ?? 48;
-    this.thumb.style.width = `${Math.max(itemWidth + 10, 52)}px`;
-
-    this.updateThumbPosition(snapX, true);
-
     // Update active class on items
     this.itemElements.forEach((el, i) => {
       el.classList.remove('candidate');
@@ -381,6 +420,11 @@ export class iPhoneSliderNav {
       }
     });
 
+    // Re-align thumb smoothly to live position of the activated element
+    requestAnimationFrame(() => {
+      this.realignActiveThumb(true);
+    });
+
     // ONLY load the page at the current snap position when requested
     if (notifyState) {
       const selectedItem = this.items[index];
@@ -389,5 +433,10 @@ export class iPhoneSliderNav {
       }
     }
   }
-}
 
+  public destroy(): void {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+  }
+}

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { TourState } from '../state/TourState';
 import { CameraControl } from './CameraControl';
 import { TextureManager } from './TextureManager';
+import { RoomPreloader } from './RoomPreloader';
 
 export class Viewer360 {
   private container: HTMLElement;
@@ -10,6 +11,7 @@ export class Viewer360 {
   private renderer: THREE.WebGLRenderer;
   private cameraControl: CameraControl;
   private textureManager: TextureManager;
+  private roomPreloader: RoomPreloader;
   private tourState: TourState;
 
   // Dual spherical meshes for cinematic crossfade
@@ -31,6 +33,7 @@ export class Viewer360 {
     this.container = container;
     this.tourState = TourState.get();
     this.textureManager = new TextureManager();
+    this.roomPreloader = new RoomPreloader(this.tourState.getConfig(), this.textureManager);
 
     // 1. Scene
     this.scene = new THREE.Scene();
@@ -102,27 +105,54 @@ export class Viewer360 {
       true
     );
 
-    // Load initial texture
-    const texture = await this.textureManager.loadTexture(currentRoom.panorama.standard);
+    // Fast initial start: if preview is available, load it immediately
+    if (currentRoom.panorama.preview) {
+      try {
+        const previewTex = await this.textureManager.loadTexture(currentRoom.panorama.preview, {
+          priority: 'high'
+        });
+        if (this.activeSphere === 'A') {
+          this.materialA.map = previewTex;
+          this.materialA.needsUpdate = true;
+          this.materialA.opacity = 1.0;
+        }
+      } catch (_) {}
+    }
+
+    // Load full-resolution standard texture
+    const texture = await this.textureManager.loadTexture(currentRoom.panorama.standard, {
+      priority: 'high',
+      fallbackUrl: currentRoom.panorama.fallback
+    });
     this.materialA.map = texture;
     this.materialA.needsUpdate = true;
     this.materialA.opacity = 1.0;
     this.materialB.opacity = 0.0;
     this.activeSphere = 'A';
+
+    // Intelligently preload adjacent rooms in background
+    this.roomPreloader.preloadAdjacentRooms(currentRoom.id);
   }
 
   public async loadRoom(roomId: string): Promise<void> {
     const room = this.tourState.getConfig().rooms[roomId];
     if (!room) return;
 
+    // Aggressive caching: if texture is already cached, bypass loader indicator completely
     const isCached = this.textureManager.hasTexture(room.panorama.standard);
     if (!isCached) {
       this.tourState.setRoomLoading(true, room.name);
     }
 
     try {
-      const texture = await this.textureManager.loadTexture(room.panorama.standard);
-      this.tourState.setRoomLoading(false);
+      const texture = await this.textureManager.loadTexture(room.panorama.standard, {
+        priority: 'high',
+        fallbackUrl: room.panorama.fallback
+      });
+
+      if (!isCached) {
+        this.tourState.setRoomLoading(false);
+      }
 
       // Smoothly orient camera toward room's preferred angle
       this.cameraControl.setOrientation(
@@ -134,6 +164,9 @@ export class Viewer360 {
 
       // Execute dual-mesh crossfade
       this.startCrossfade(texture);
+
+      // Intelligently preload adjacent rooms in background
+      this.roomPreloader.preloadAdjacentRooms(roomId);
     } catch (err) {
       this.tourState.setRoomLoading(false);
       console.error(`Error loading room ${roomId}:`, err);

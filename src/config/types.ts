@@ -15,6 +15,7 @@ export interface RoomConfig {
   panorama: {
     preview?: string;
     standard: string;
+    fallback?: string;
     high?: string;
   };
   initialCamera: {
@@ -33,6 +34,7 @@ export interface RoomConfig {
 
 export interface GalleryPhoto {
   url: string;
+  thumbnailUrl?: string;
   caption?: string;
   width?: number;
   height?: number;

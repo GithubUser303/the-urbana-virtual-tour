@@ -122,10 +122,10 @@ export class ScatteredGallery {
       card.appendChild(placeholderContent);
     } else {
       const img = document.createElement('img');
-      img.src = item.photos[0].url;
+      const thumbUrl = item.photos[0].thumbnailUrl || item.photos[0].url;
+      img.dataset.src = thumbUrl;
       img.alt = item.title;
       img.className = 'scatter-card-img';
-      img.loading = 'lazy';
 
       const infoPill = document.createElement('div');
       infoPill.className = 'scatter-card-info';
@@ -167,6 +167,16 @@ export class ScatteredGallery {
   public open(): void {
     this.isOpen = true;
     this.element.style.display = 'flex';
+
+    // On-demand lazy load thumbnail assets only when gallery is opened
+    const pendingImages = this.itemsContainer.querySelectorAll<HTMLImageElement>('img[data-src]');
+    pendingImages.forEach((img) => {
+      if (img.dataset.src) {
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+      }
+    });
+
     requestAnimationFrame(() => {
       this.element.classList.add('active');
     });

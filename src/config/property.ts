@@ -37,7 +37,9 @@ export const propertyConfig: PropertyConfig = {
       id: 'living',
       name: 'Living Room',
       panorama: {
-        standard: '/assets/panoramas/living-room.jpg'
+        preview: '/assets/panoramas/living-room-preview.webp',
+        standard: '/assets/panoramas/living-room.webp',
+        fallback: '/assets/panoramas/living-room.jpg'
       },
       initialCamera: {
         yaw: 0,
@@ -90,7 +92,9 @@ export const propertyConfig: PropertyConfig = {
       id: 'dining',
       name: 'Dining Room',
       panorama: {
-        standard: '/assets/panoramas/dining-room.jpg'
+        preview: '/assets/panoramas/dining-room-preview.webp',
+        standard: '/assets/panoramas/dining-room.webp',
+        fallback: '/assets/panoramas/dining-room.jpg'
       },
       initialCamera: {
         yaw: 70,
@@ -135,7 +139,9 @@ export const propertyConfig: PropertyConfig = {
       id: 'master',
       name: 'Master Bedroom',
       panorama: {
-        standard: '/assets/panoramas/bedroom-1.jpg'
+        preview: '/assets/panoramas/bedroom-1-preview.webp',
+        standard: '/assets/panoramas/bedroom-1.webp',
+        fallback: '/assets/panoramas/bedroom-1.jpg'
       },
       initialCamera: {
         yaw: 75,
@@ -180,7 +186,9 @@ export const propertyConfig: PropertyConfig = {
       id: 'guest',
       name: 'Guest Bedroom',
       panorama: {
-        standard: '/assets/panoramas/bedroom-2.jpg'
+        preview: '/assets/panoramas/bedroom-2-preview.webp',
+        standard: '/assets/panoramas/bedroom-2.webp',
+        fallback: '/assets/panoramas/bedroom-2.jpg'
       },
       initialCamera: {
         yaw: 90,
@@ -217,7 +225,9 @@ export const propertyConfig: PropertyConfig = {
       id: 'kitchen',
       name: 'Kitchen',
       panorama: {
-        standard: '/assets/panoramas/kitchen.jpg'
+        preview: '/assets/panoramas/kitchen-preview.webp',
+        standard: '/assets/panoramas/kitchen.webp',
+        fallback: '/assets/panoramas/kitchen.jpg'
       },
       initialCamera: {
         yaw: 0,
@@ -254,7 +264,9 @@ export const propertyConfig: PropertyConfig = {
       id: 'bathroom',
       name: 'Bathroom',
       panorama: {
-        standard: '/assets/panoramas/bathroom.jpg'
+        preview: '/assets/panoramas/bathroom-preview.webp',
+        standard: '/assets/panoramas/bathroom.webp',
+        fallback: '/assets/panoramas/bathroom.jpg'
       },
       initialCamera: {
         yaw: 0,
@@ -295,7 +307,8 @@ export const propertyConfig: PropertyConfig = {
       title: 'Living Room',
       photos: [
         {
-          url: '/assets/gallery/living-room.jpg',
+          url: '/assets/gallery/living-room.webp',
+          thumbnailUrl: '/assets/gallery/living-room-thumb.webp',
           caption: 'Spacious light-flooded architectural living area'
         }
       ],
@@ -316,7 +329,8 @@ export const propertyConfig: PropertyConfig = {
       title: 'Master Bedroom',
       photos: [
         {
-          url: '/assets/gallery/bedroom-1.jpg',
+          url: '/assets/gallery/bedroom-1.webp',
+          thumbnailUrl: '/assets/gallery/bedroom-1-thumb.webp',
           caption: 'Primary master bedroom sanctuary with minimalist aesthetics'
         }
       ],
@@ -337,7 +351,8 @@ export const propertyConfig: PropertyConfig = {
       title: 'Guest Bedroom',
       photos: [
         {
-          url: '/assets/gallery/bedroom-2.jpg',
+          url: '/assets/gallery/bedroom-2.webp',
+          thumbnailUrl: '/assets/gallery/bedroom-2-thumb.webp',
           caption: 'Refined guest bedroom suite featuring panoramic city views'
         }
       ],
@@ -358,7 +373,8 @@ export const propertyConfig: PropertyConfig = {
       title: 'Dining Room',
       photos: [
         {
-          url: '/assets/gallery/dining-room.jpg',
+          url: '/assets/gallery/dining-room.webp',
+          thumbnailUrl: '/assets/gallery/dining-room-thumb.webp',
           caption: 'Refined dining arrangement with sculptural lighting'
         }
       ],
@@ -379,7 +395,8 @@ export const propertyConfig: PropertyConfig = {
       title: 'Kitchen',
       photos: [
         {
-          url: '/assets/gallery/kitchen.jpg',
+          url: '/assets/gallery/kitchen.webp',
+          thumbnailUrl: '/assets/gallery/kitchen-thumb.webp',
           caption: 'High-precision culinary space with custom cabinetry'
         }
       ],
@@ -400,7 +417,8 @@ export const propertyConfig: PropertyConfig = {
       title: 'Bathroom',
       photos: [
         {
-          url: '/assets/gallery/bathroom.jpg',
+          url: '/assets/gallery/bathroom.webp',
+          thumbnailUrl: '/assets/gallery/bathroom-thumb.webp',
           caption: 'Monolithic stone spa bathroom with walk-in enclosure'
         }
       ],

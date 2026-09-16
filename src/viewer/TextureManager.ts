@@ -1,15 +1,22 @@
 import * as THREE from 'three';
 
+export interface LoadTextureOptions {
+  priority?: 'high' | 'low' | 'auto';
+  fallbackUrl?: string;
+  onProgress?: (progress: number) => void;
+}
+
 export class TextureManager {
-  private loader: THREE.TextureLoader;
   private cache: Map<string, THREE.Texture> = new Map();
   private loadingPromises: Map<string, Promise<THREE.Texture>> = new Map();
 
-  constructor() {
-    this.loader = new THREE.TextureLoader();
-  }
-
-  public async loadTexture(url: string, onProgress?: (progress: number) => void): Promise<THREE.Texture> {
+  /**
+   * Load a texture asynchronously with off-main-thread image decoding and fetchPriority
+   */
+  public async loadTexture(
+    url: string,
+    options: LoadTextureOptions = {}
+  ): Promise<THREE.Texture> {
     if (this.cache.has(url)) {
       return this.cache.get(url)!;
     }
@@ -18,34 +25,79 @@ export class TextureManager {
       return this.loadingPromises.get(url)!;
     }
 
-    const loadPromise = new Promise<THREE.Texture>((resolve, reject) => {
-      this.loader.load(
-        url,
-        (texture) => {
+    const { priority = 'auto', fallbackUrl } = options;
+
+    const promise = (async () => {
+      try {
+        const texture = await this.fetchAndDecodeTexture(url, priority);
+        this.cache.set(url, texture);
+        return texture;
+      } catch (primaryErr) {
+        if (fallbackUrl && fallbackUrl !== url) {
+          console.warn(`Primary texture ${url} failed, attempting fallback ${fallbackUrl}`);
+          try {
+            const fallbackTex = await this.fetchAndDecodeTexture(fallbackUrl, priority);
+            this.cache.set(url, fallbackTex);
+            return fallbackTex;
+          } catch (fallbackErr) {
+            console.error(`Fallback texture failed as well for ${fallbackUrl}:`, fallbackErr);
+            throw fallbackErr;
+          }
+        }
+        throw primaryErr;
+      } finally {
+        this.loadingPromises.delete(url);
+      }
+    })();
+
+    this.loadingPromises.set(url, promise);
+    return promise;
+  }
+
+  /**
+   * Fetch image with priority and decode off-main-thread before uploading to WebGL
+   */
+  private async fetchAndDecodeTexture(
+    url: string,
+    priority: 'high' | 'low' | 'auto'
+  ): Promise<THREE.Texture> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      if ('fetchPriority' in img) {
+        (img as HTMLImageElement & { fetchPriority: string }).fetchPriority = priority;
+      }
+
+      img.onload = async () => {
+        try {
+          if ('decode' in img) {
+            await img.decode();
+          }
+          const texture = new THREE.Texture(img);
           texture.colorSpace = THREE.SRGBColorSpace;
           texture.minFilter = THREE.LinearFilter;
           texture.magFilter = THREE.LinearFilter;
           texture.generateMipmaps = false;
-
-          this.cache.set(url, texture);
-          this.loadingPromises.delete(url);
+          texture.needsUpdate = true;
           resolve(texture);
-        },
-        (event) => {
-          if (event.lengthComputable && onProgress) {
-            onProgress(event.loaded / event.total);
-          }
-        },
-        (err) => {
-          this.loadingPromises.delete(url);
-          console.error(`Failed to load texture at ${url}:`, err);
-          reject(err);
+        } catch (err) {
+          // If decode fails, still attempt to construct texture from loaded image
+          const texture = new THREE.Texture(img);
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.minFilter = THREE.LinearFilter;
+          texture.magFilter = THREE.LinearFilter;
+          texture.generateMipmaps = false;
+          texture.needsUpdate = true;
+          resolve(texture);
         }
-      );
-    });
+      };
 
-    this.loadingPromises.set(url, loadPromise);
-    return loadPromise;
+      img.onerror = (err) => {
+        reject(err);
+      };
+
+      img.src = url;
+    });
   }
 
   public hasTexture(url: string): boolean {
@@ -62,4 +114,3 @@ export class TextureManager {
     this.loadingPromises.clear();
   }
 }
-

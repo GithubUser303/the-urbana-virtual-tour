@@ -38,9 +38,12 @@ export class RoomPreloader {
       try {
         const url = room.panorama.standard;
         if (!this.textureManager.hasTexture(url)) {
-          // Use requestIdleCallback or small delay to avoid competing with main render
-          await new Promise((resolve) => setTimeout(resolve, 300));
-          await this.textureManager.loadTexture(url);
+          // Use idle delay to avoid competing with main render
+          await new Promise((resolve) => setTimeout(resolve, 400));
+          await this.textureManager.loadTexture(url, {
+            priority: 'low',
+            fallbackUrl: room.panorama.fallback
+          });
         }
         this.preloadedRooms.add(nextRoomId);
       } catch (err) {
