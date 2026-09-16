@@ -58,13 +58,55 @@ export class OrientationPrompt {
         <h2 class="orientation-title">Please rotate your device</h2>
         
         <div class="orientation-icon-wrapper">
-          <svg class="orientation-phone-icon" viewBox="0 0 48 48" width="56" height="56" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <!-- Phone outline -->
-            <rect x="14" y="6" width="20" height="36" rx="4" ry="4" class="phone-body" />
-            <line x1="22" y1="36" x2="26" y2="36" class="phone-home" />
-            <!-- Rotate arrow indicator -->
-            <path d="M38 16 A 18 18 0 1 0 38 32" stroke-dasharray="3 3" opacity="0.4" />
-            <path d="M40 20 L 40 14 L 34 14" stroke-width="2" />
+          <div class="orientation-icon-glow"></div>
+          <svg class="orientation-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <!-- Phone chassis tinted glass gradient -->
+              <linearGradient id="urbana-phone-body" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="rgba(34, 44, 60, 0.85)" />
+                <stop offset="100%" stop-color="rgba(14, 20, 30, 0.95)" />
+              </linearGradient>
+
+              <!-- Phone display screen gradient -->
+              <linearGradient id="urbana-phone-screen" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="rgba(10, 14, 22, 0.75)" />
+                <stop offset="100%" stop-color="rgba(20, 28, 42, 0.85)" />
+              </linearGradient>
+
+              <!-- Orbit path gradient -->
+              <linearGradient id="urbana-orbit-grad" x1="100%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#e2b96f" stop-opacity="0.15" />
+                <stop offset="60%" stop-color="#e2b96f" stop-opacity="0.75" />
+                <stop offset="100%" stop-color="#e2b96f" stop-opacity="1" />
+              </linearGradient>
+            </defs>
+
+            <!-- Target Landscape Destination Silhouette (Faint alignment guide) -->
+            <rect x="24" y="34" width="52" height="32" rx="6" class="orientation-target-silhouette" />
+
+            <!-- Orbit Rotation Guide Arc & Arrowhead -->
+            <path d="M 50 9 A 41 41 0 0 0 9 46" class="orientation-orbit-path" />
+            <circle cx="50" cy="9" r="2" class="orientation-orbit-dot" />
+            <path d="M 5 44 L 13 44 L 9 52 Z" class="orientation-orbit-arrow" />
+
+            <!-- Animated Rotating Phone Group -->
+            <g class="orientation-device-rotator">
+              <!-- Chassis Frame -->
+              <rect x="34" y="24" width="32" height="52" rx="6" class="phone-frame" />
+              
+              <!-- Screen Area -->
+              <rect x="36.5" y="28" width="27" height="44" rx="4" class="phone-screen" />
+              
+              <!-- Architectural Horizon Preview -->
+              <path d="M 38 52 L 44 48 L 50 51 L 56 47 L 62 52" class="phone-horizon" />
+              <circle cx="55" cy="41" r="1.8" class="phone-sun" />
+
+              <!-- Speaker Notch / Dynamic Island -->
+              <rect x="46" y="25.5" width="8" height="1.6" rx="0.8" class="phone-notch" />
+              
+              <!-- Home Indicator Bar -->
+              <rect x="44.5" y="68.5" width="11" height="1.2" rx="0.6" class="phone-home" />
+            </g>
           </svg>
         </div>
 
@@ -110,39 +152,45 @@ export class OrientationPrompt {
   public show(): void {
     this.isVisible = true;
     this.isTransitioning = false;
+    this.element.classList.remove('dismissing');
     this.element.classList.add('active');
     document.body.classList.add('orientation-lock-active');
   }
 
   /**
    * Smooth transition to landscape:
-   * 1. Keep prompt visible while browser dimensions settle.
-   * 2. Recalculate Three.js viewport & GUI geometry.
-   * 3. Once landscape layout is rendered, fade out prompt to eliminate jumps.
+   * 1. Detect landscape orientation.
+   * 2. Fade out the orientation card and soften backdrop blur.
+   * 3. Recalculate Three.js viewport & GUI geometry.
+   * 4. Once landscape layout is rendered, reveal the tour seamlessly without jumps.
    */
   private handleRotateToLandscape(): void {
     this.isTransitioning = true;
 
-    // First frame: allow browser to update landscape CSS
+    // Start graceful card scale/fade and blur reduction
+    this.element.classList.add('dismissing');
+
+    // First frame: allow browser to settle landscape CSS
     requestAnimationFrame(() => {
-      // Trigger Three.js and navigation slider dimension recalculations
+      // Trigger Three.js renderer and navigation slider dimension recalculations
       window.dispatchEvent(new Event('resize'));
 
       // Second frame: confirm layout coordinates have settled
       requestAnimationFrame(() => {
         window.dispatchEvent(new Event('resize'));
 
-        // Start smooth CSS fade out
+        // Start backdrop opacity fade out
         this.element.classList.remove('active');
         document.body.classList.remove('orientation-lock-active');
 
         // Complete transition after fade animation finishes
         setTimeout(() => {
+          this.element.classList.remove('dismissing');
           this.isVisible = false;
           this.isTransitioning = false;
-          // Final sanity check for slider thumb & canvas
+          // Final layout verification for slider thumb & Three.js canvas
           window.dispatchEvent(new Event('resize'));
-        }, 450);
+        }, 480);
       });
     });
   }

@@ -1390,7 +1390,7 @@ body.orientation-lock-active {
 
 /* ============================================================
    ORIENTATION PROMPT — Portrait-mode overlay for phones
-   Uses fixed + inset:0 + dvh to fill the true viewport
+   Luxury tinted-glass modal with custom animated rotate illustration
    ============================================================ */
 
 /* Prevent tour interaction while portrait prompt is active —
@@ -1400,40 +1400,38 @@ body.orientation-lock-active #app {
 }
 
 .orientation-prompt {
-  /* True full-viewport overlay — fixed, not absolute */
+  /* True full-viewport overlay anchored to true screen dimensions */
   position: fixed;
   inset: 0;
   width: 100vw;
-  /* dvh: accounts for mobile browser chrome appearing/disappearing */
-  height: 100dvh;
-  /* Safe fallback for browsers without dvh support */
   height: 100vh;
   height: 100dvh;
-
   z-index: 99999;
 
-  /* Center the card both axes */
+  /* Perfect two-axis centering */
   display: flex;
   align-items: center;
   justify-content: center;
 
-  /* Frosted-glass background matching site aesthetic */
-  background: rgba(6, 7, 9, 0.88);
-  backdrop-filter: blur(24px) saturate(1.5);
-  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  /* Section 13D: Translucent tinted-glass backdrop — property remains softly visible */
+  background: rgba(6, 8, 12, 0.64);
+  backdrop-filter: blur(14px) saturate(125%);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
 
-  /* Prevent any horizontal overflow or clipping */
+  /* Prevent any horizontal or vertical overflow */
   overflow: hidden;
 
-  /* Safe-area padding so content never hides under notches/home indicators */
-  padding: calc(16px + var(--sat)) calc(16px + var(--sal)) calc(16px + var(--sab)) calc(16px + var(--sar));
+  /* Safe-area padding prevents notches & home bars from encroaching */
+  padding: calc(18px + var(--sat)) calc(18px + var(--sal)) calc(18px + var(--sab)) calc(18px + var(--sar));
 
-  /* Hidden by default — shown when .active is added */
+  /* Initial hidden state */
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              visibility 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.45s cubic-bezier(0.3, 0, 0.2, 1),
+              visibility 0.45s cubic-bezier(0.3, 0, 0.2, 1),
+              backdrop-filter 0.45s ease,
+              -webkit-backdrop-filter 0.45s ease;
 }
 
 .orientation-prompt.active {
@@ -1442,93 +1440,282 @@ body.orientation-lock-active #app {
   visibility: visible;
 }
 
-/* Card: glassy content panel */
+/* Section 13H: Smooth dismissal transition — softens blur as landscape reveals */
+.orientation-prompt.dismissing {
+  backdrop-filter: blur(4px) saturate(110%);
+  -webkit-backdrop-filter: blur(4px) saturate(110%);
+}
+
+.orientation-prompt.dismissing .orientation-card {
+  transform: scale(0.96);
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Section 13C: Centered luxury glass card */
 .orientation-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(14px, 3vh, 24px);
+  gap: clamp(16px, 3.2vh, 24px);
 
-  /* Constrain so it never stretches to full viewport width */
-  width: min(340px, calc(100vw - 48px));
+  /* Responsive width — never clips or touches viewport edges */
+  width: min(320px, calc(100vw - 44px));
   max-width: 100%;
 
-  padding: clamp(24px, 5vh, 40px) clamp(20px, 5vw, 36px);
-  border-radius: 24px;
-  background: var(--glass-bg, rgba(22, 28, 38, 0.55));
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.15));
-  box-shadow: var(--glass-shadow, 0 16px 40px rgba(0, 0, 0, 0.5));
+  padding: clamp(26px, 5vh, 38px) clamp(20px, 5vw, 32px);
+  border-radius: 28px;
+  background: rgba(20, 26, 38, 0.65);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55),
+              0 0 0 1px rgba(226, 185, 111, 0.12),
+              inset 0 1px 0 rgba(255, 255, 255, 0.22);
   text-align: center;
-
-  /* Prevent any internal content overflow */
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+  transform: scale(1);
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+              opacity 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Title */
+/* Section 13K: Title */
 .orientation-title {
   font-family: var(--font-sans);
-  font-size: clamp(0.95rem, 3.5vw, 1.2rem);
-  font-weight: 400;
-  letter-spacing: 1px;
-  color: var(--text-primary);
-  line-height: 1.4;
-  /* Do NOT clip text */
+  font-size: clamp(1.02rem, 4.2vw, 1.22rem);
+  font-weight: 500;
+  letter-spacing: 0.6px;
+  color: var(--text-primary, #f5f5f7);
+  line-height: 1.35;
+  margin: 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   overflow: visible;
   white-space: normal;
   word-break: break-word;
 }
 
-/* Rotating phone icon wrapper */
+/* Section 13E, 13F: Icon Container */
 .orientation-icon-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Keeps icon fully visible with comfortable breathing room */
-  padding: 6px;
+  width: clamp(78px, 19vw, 102px);
+  height: clamp(78px, 19vw, 102px);
+  position: relative;
   flex-shrink: 0;
+  margin: 2px 0;
 }
 
-/* Phone SVG icon — scales with viewport */
-.orientation-phone-icon {
-  width: clamp(40px, 10vw, 64px);
-  height: clamp(40px, 10vw, 64px);
-  color: var(--accent-gold, #e2b96f);
-  /* Subtle continuous rotate animation */
-  animation: orientationRotate 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  /* Prevent icon from being clipped by parent */
+/* Subtle warm ambient glow behind the rotating phone */
+.orientation-icon-glow {
+  position: absolute;
+  inset: 6%;
+  background: radial-gradient(circle, rgba(226, 185, 111, 0.16) 0%, rgba(226, 185, 111, 0.03) 55%, transparent 72%);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(4px);
+}
+
+.orientation-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
   overflow: visible;
-  flex-shrink: 0;
 }
 
-@keyframes orientationRotate {
-  0%   { transform: rotate(0deg);   }
-  30%  { transform: rotate(-90deg); }
-  60%  { transform: rotate(-90deg); }
-  90%  { transform: rotate(0deg);   }
-  100% { transform: rotate(0deg);   }
+/* Section 13A, 13B: Custom Rotate-to-Landscape Illustration Elements */
+
+/* 1. Target Landscape Destination Silhouette */
+.orientation-target-silhouette {
+  fill: rgba(226, 185, 111, 0.025);
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 1.2;
+  stroke-dasharray: 2.5 3;
+  animation: silhouetteDockGlow 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-/* Descriptive paragraph */
+/* 2. Orbit Rotation Guide Arc & Indicators */
+.orientation-orbit-path {
+  fill: none;
+  stroke: url(#urbana-orbit-grad);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 4 4;
+  animation: orbitDashPulse 3.8s ease infinite;
+}
+
+.orientation-orbit-dot {
+  fill: var(--accent-gold, #e2b96f);
+  opacity: 0.8;
+  animation: orbitFadePulse 3.8s ease infinite;
+}
+
+.orientation-orbit-arrow {
+  fill: var(--accent-gold, #e2b96f);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+  animation: arrowPulse 3.8s ease infinite;
+}
+
+/* 3. Rotating Phone Group — Centered at (50, 50) in SVG */
+.orientation-device-rotator {
+  transform-origin: 50px 50px;
+  animation: deviceRotateLandscape 3.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* Phone Glass Chassis */
+.phone-frame {
+  fill: url(#urbana-phone-body);
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 1.4;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45));
+}
+
+/* Inner Display Screen */
+.phone-screen {
+  fill: url(#urbana-phone-screen);
+  stroke: rgba(226, 185, 111, 0.22);
+  stroke-width: 0.8;
+}
+
+/* Landscape Horizon Graphic inside phone screen */
+.phone-horizon {
+  fill: none;
+  stroke: var(--accent-gold, #e2b96f);
+  stroke-width: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.75;
+}
+
+.phone-sun {
+  fill: var(--accent-gold, #e2b96f);
+  opacity: 0.85;
+  filter: drop-shadow(0 0 3px rgba(226, 185, 111, 0.8));
+}
+
+.phone-notch {
+  fill: rgba(255, 255, 255, 0.55);
+}
+
+.phone-home {
+  fill: rgba(255, 255, 255, 0.38);
+}
+
+/* Section 13B: Cinematic Animation Keyframes */
+
+/* Smooth, luxury device rotation with resting pauses */
+@keyframes deviceRotateLandscape {
+  0%, 15% {
+    transform: rotate(0deg);
+  }
+  45%, 72% {
+    transform: rotate(-90deg);
+  }
+  92%, 100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* Target silhouette pulses warmly when device aligns with landscape position */
+@keyframes silhouetteDockGlow {
+  0%, 20% {
+    stroke: rgba(255, 255, 255, 0.16);
+    stroke-dasharray: 2.5 3;
+    filter: none;
+  }
+  45%, 72% {
+    stroke: var(--accent-gold, #e2b96f);
+    stroke-dasharray: none;
+    filter: drop-shadow(0 0 6px rgba(226, 185, 111, 0.55));
+  }
+  90%, 100% {
+    stroke: rgba(255, 255, 255, 0.16);
+    stroke-dasharray: 2.5 3;
+    filter: none;
+  }
+}
+
+/* Dashed rotation orbit indicator pulse */
+@keyframes orbitDashPulse {
+  0%, 15% {
+    opacity: 0.3;
+    stroke-dashoffset: 8;
+  }
+  30%, 55% {
+    opacity: 0.95;
+    stroke-dashoffset: 0;
+  }
+  72%, 100% {
+    opacity: 0.3;
+    stroke-dashoffset: -8;
+  }
+}
+
+/* Guide arrowhead glow pulse */
+@keyframes arrowPulse {
+  0%, 15% {
+    opacity: 0.4;
+  }
+  35%, 65% {
+    opacity: 1;
+    filter: drop-shadow(0 0 5px rgba(226, 185, 111, 0.8));
+  }
+  85%, 100% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes orbitFadePulse {
+  0%, 15% {
+    opacity: 0.35;
+  }
+  35%, 65% {
+    opacity: 0.95;
+  }
+  85%, 100% {
+    opacity: 0.35;
+  }
+}
+
+/* Section 13K: Description Typography */
 .orientation-desc {
   font-family: var(--font-sans);
-  font-size: clamp(0.72rem, 2.5vw, 0.88rem);
-  color: var(--text-secondary);
-  line-height: 1.6;
-  letter-spacing: 0.5px;
-  /* No overflow clipping */
+  font-size: clamp(0.74rem, 2.7vw, 0.86rem);
+  font-weight: 400;
+  color: var(--text-secondary, rgba(245, 245, 247, 0.72));
+  line-height: 1.55;
+  letter-spacing: 0.4px;
+  margin: 0;
   overflow: visible;
   white-space: normal;
   word-break: break-word;
 }
 
-/* "LANDSCAPE MODE" emphasis span */
+/* "LANDSCAPE MODE" Accent Banner */
 .orientation-desc span {
   display: block;
-  margin-top: 4px;
-  font-size: clamp(0.78rem, 2.8vw, 0.95rem);
+  margin-top: 5px;
+  font-size: clamp(0.78rem, 3vw, 0.92rem);
   font-weight: 600;
-  letter-spacing: clamp(1.5px, 0.5vw, 3px);
+  letter-spacing: clamp(1.8px, 0.5vw, 3px);
   text-transform: uppercase;
   color: var(--accent-gold, #e2b96f);
+  text-shadow: 0 0 16px rgba(226, 185, 111, 0.35);
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .orientation-device-rotator {
+    animation: none;
+    transform: rotate(-90deg);
+  }
+  .orientation-target-silhouette,
+  .orientation-orbit-path,
+  .orientation-orbit-arrow,
+  .orientation-orbit-dot {
+    animation: none;
+  }
 }
