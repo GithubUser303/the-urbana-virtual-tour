@@ -145,7 +145,8 @@ export class CameraControl {
     // Scale sensitivity by current FOV
     const sensitivity = (this.currentFov / 75) * 0.16;
 
-    this.targetYaw -= deltaX * sensitivity;
+    // Drag 360 view screen: goes right when dragging left and vice versa
+    this.targetYaw += deltaX * sensitivity;
     this.targetPitch -= deltaY * sensitivity;
     this.targetPitch = Math.max(this.minPitch, Math.min(this.maxPitch, this.targetPitch));
   }
