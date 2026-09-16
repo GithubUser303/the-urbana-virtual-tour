@@ -83,13 +83,15 @@
   top: calc(14px + var(--sat));
   left: 50%;
   transform: translateX(-50%);
-  width: min(calc(100vw - 32px), 580px);
+  /* Tighter page-edge margin: 16px each side instead of 32px */
+  width: min(calc(100vw - 16px), 620px);
   height: 52px;
   z-index: 120;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 0 clamp(8px, 1.8vw, 16px);
+  /* Reduced inner padding so sections sit closer to pill edges */
+  padding: 0 clamp(4px, 1vw, 10px);
   border-radius: 26px;
   /* Allow script font ascenders/descenders to render outside the 52px fixed height */
   overflow: visible;
@@ -109,7 +111,8 @@
   color: var(--text-primary);
   text-align: center;
   /* Generous vertical padding so script font ascenders/descenders clear the bar edges */
-  padding: clamp(6px, 1.4vh, 10px) clamp(8px, 2vw, 24px);
+  /* Reduced horizontal padding to tighten gap between title and side buttons */
+  padding: clamp(6px, 1.4vh, 10px) clamp(6px, 1.2vw, 14px);
   border-left: 1px solid rgba(255, 255, 255, 0.12);
   border-right: 1px solid rgba(255, 255, 255, 0.12);
   white-space: nowrap;
@@ -132,7 +135,8 @@
   letter-spacing: clamp(1px, 0.2vw, 2px);
   text-transform: uppercase;
   color: var(--text-secondary);
-  padding: 8px clamp(6px, 1.2vw, 12px);
+  /* Tighter horizontal padding — text sits closer to its natural width */
+  padding: 8px clamp(5px, 0.8vw, 8px);
   border-radius: 16px;
   transition: color 0.25s ease;
   white-space: nowrap;
