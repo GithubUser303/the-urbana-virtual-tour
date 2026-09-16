@@ -114,7 +114,7 @@ export class LocationModal {
 
     L.marker([loc.latitude, loc.longitude], { icon: customIcon })
       .addTo(this.map)
-      .bindPopup(`<strong>the Urbana</strong><br>${loc.displayName}`)
+      .bindPopup(`<strong>${this.tourState.getConfig().projectName}</strong><br>${loc.displayName}`)
       .openPopup();
   }
 

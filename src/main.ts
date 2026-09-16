@@ -22,7 +22,7 @@ import { ControlMenu } from './ui/ControlMenu';
 import { OrientationPrompt } from './ui/OrientationPrompt';
 
 /**
- * the Urbana 360 Virtual Tour Application Bootstrapper
+ * The Urbana 360 Virtual Tour Application Bootstrapper
  */
 export class TourApp {
   private static instance: TourApp;

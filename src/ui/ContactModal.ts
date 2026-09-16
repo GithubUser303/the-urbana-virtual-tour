@@ -71,7 +71,7 @@ export class ContactModal {
     body.innerHTML = `
       <div class="contact-brand-row">
         <span class="contact-company">${contact.company}</span>
-        <span class="contact-project-tag">the Urbana</span>
+        <span class="contact-project-tag">${this.tourState.getConfig().projectName}</span>
       </div>
 
       <div class="contact-items">

@@ -32,10 +32,10 @@ export class TopBar {
       this.tourState.openModal('contact');
     });
 
-    // Center brand: the Urbana
+    // Center brand: The Urbana
     const brand = document.createElement('div');
     brand.className = 'top-brand project-font-branding';
-    brand.textContent = this.tourState.getConfig().projectName; // "the Urbana"
+    brand.textContent = this.tourState.getConfig().projectName; // "The Urbana"
 
     // Right button: Gallery
     const galleryBtn = document.createElement('button');

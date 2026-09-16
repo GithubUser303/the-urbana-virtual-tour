@@ -34,7 +34,7 @@ export class IntroScreen {
 
     const title = document.createElement('h1');
     title.className = 'intro-title project-font-branding';
-    title.textContent = this.tourState.getConfig().projectName; // "the Urbana"
+    title.textContent = this.tourState.getConfig().projectName; // "The Urbana"
 
     const subtitle = document.createElement('div');
     subtitle.className = 'intro-sub';

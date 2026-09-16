@@ -1,7 +1,7 @@
 import { PropertyConfig } from './types';
 
 export const propertyConfig: PropertyConfig = {
-  projectName: 'the Urbana',
+  projectName: 'The Urbana',
   credits: 'Experience by Lost in Renders',
   defaultRoomId: 'living',
 
