@@ -75,3 +75,12 @@
   }
 }
 
+/* Suppress cursor-following glow on touch screens where hover is unavailable */
+@media (hover: none) {
+  .glass-panel::before,
+  .scatter-card::before {
+    display: none !important;
+  }
+}
+
+

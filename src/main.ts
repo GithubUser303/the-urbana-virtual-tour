@@ -19,6 +19,7 @@ import { Lightbox } from './ui/Lightbox';
 import { ContactModal } from './ui/ContactModal';
 import { LocationModal } from './ui/LocationModal';
 import { ControlMenu } from './ui/ControlMenu';
+import { OrientationPrompt } from './ui/OrientationPrompt';
 
 /**
  * the Urbana 360 Virtual Tour Application Bootstrapper
@@ -55,7 +56,10 @@ export class TourApp {
     // 5. Initialize 360 Three.js Viewer
     this.viewer = new Viewer360(viewportContainer);
 
-    // 6. Mount Intro Screen & UI elements
+    // 6. Mount Orientation Prompt (Phone Portrait Lock)
+    new OrientationPrompt();
+
+    // 7. Mount Intro Screen & UI elements
     this.introScreen = new IntroScreen();
     new LoadingIndicator();
     new TopBar();

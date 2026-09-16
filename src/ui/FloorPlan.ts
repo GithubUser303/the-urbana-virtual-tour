@@ -6,7 +6,6 @@ export class FloorPlan {
   private isExpanded = false;
   private isMinimized = false;
   private currentRoomLabel!: HTMLElement;
-  private radarCone!: HTMLElement;
   private roomRegions: Map<string, SVGElement> = new Map();
   private mapHotspots: Map<string, HTMLElement> = new Map();
 
@@ -17,10 +16,6 @@ export class FloorPlan {
 
     this.tourState.on('roomChange', (state) => {
       this.updateCurrentRoom(state.currentRoomId);
-    });
-
-    this.tourState.on('cameraMove', (state) => {
-      this.updateRadarCone(state.cameraYaw);
     });
 
     this.tourState.on('uiVisibilityChange', (state) => {
@@ -141,11 +136,6 @@ export class FloorPlan {
 
     blueprintWrapper.appendChild(svgOverlay);
 
-    // Radar directional cone
-    this.radarCone = document.createElement('div');
-    this.radarCone.className = 'floorplan-radar-cone';
-    blueprintWrapper.appendChild(this.radarCone);
-
     // Room position indicator dots
     const rooms = this.tourState.getConfig().rooms;
     Object.entries(rooms).forEach(([roomId, config]) => {
@@ -234,19 +224,6 @@ export class FloorPlan {
         dot.classList.remove('active');
       }
     });
-
-    // Position radar cone at current room coordinate
-    this.radarCone.style.top = room.floorPlanCoords.top;
-    this.radarCone.style.left = room.floorPlanCoords.left;
-  }
-
-  private updateRadarCone(cameraYaw: number): void {
-    const currentRoom = this.tourState.getCurrentRoom();
-    if (!currentRoom) return;
-
-    const offset = currentRoom.floorPlanCoords.yawOffset ?? 180;
-    const rotation = cameraYaw + offset;
-    this.radarCone.style.transform = `translate(-50%, -100%) rotate(${rotation.toFixed(1)}deg)`;
   }
 }
 

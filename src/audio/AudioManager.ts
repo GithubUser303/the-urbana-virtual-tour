@@ -47,6 +47,28 @@ export class AudioManager {
     window.addEventListener('click', unlock, { passive: true });
     window.addEventListener('touchstart', unlock, { passive: true });
     window.addEventListener('keydown', unlock, { passive: true });
+
+    // Stop background music when tab is switched, minimized, or window is closed
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (!this.audio.paused) {
+          this.audio.pause();
+        }
+      } else {
+        // Resume when tab becomes active again (if unmuted and initialized)
+        if (this.isInitialized && !this.tourState.getState().isAudioMuted) {
+          this.playWithFadeIn();
+        }
+      }
+    });
+
+    window.addEventListener('pagehide', () => {
+      this.audio.pause();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      this.audio.pause();
+    });
   }
 
   public static init(): AudioManager {

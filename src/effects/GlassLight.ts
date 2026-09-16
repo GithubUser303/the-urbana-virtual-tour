@@ -34,6 +34,15 @@ export class GlassLight {
   }
 
   private handlePointerMove(e: PointerEvent): void {
+    // On touch devices where there is no physical cursor, do not show a permanent fake cursor glow
+    if (e.pointerType === 'touch') {
+      if (this.hoveredElement) {
+        this.hoveredElement.style.setProperty('--glow-opacity', '0');
+        this.hoveredElement = null;
+      }
+      return;
+    }
+
     this.targetX = e.clientX;
     this.targetY = e.clientY;
 

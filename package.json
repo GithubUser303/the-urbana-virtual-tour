@@ -16,6 +16,7 @@
     "@types/leaflet": "^1.9.16",
     "@types/three": "^0.174.0",
     "sharp": "^0.35.4",
+    "ttf2woff2": "^8.0.1",
     "typescript": "^5.7.3",
     "vite": "^6.2.0"
   }

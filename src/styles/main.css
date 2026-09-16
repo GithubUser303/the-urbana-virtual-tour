@@ -1,7 +1,8 @@
 /* Typography & Custom Fonts */
 @font-face {
   font-family: 'UrbanaBrand';
-  src: url('/assets/fonts/journey-begins-demo.ttf') format('truetype');
+  src: url('/assets/fonts/journey-begins-demo.woff2') format('woff2'),
+       url('/assets/fonts/journey-begins-demo.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
