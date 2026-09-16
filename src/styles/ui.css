@@ -80,11 +80,15 @@
    ============================================================ */
 .top-bar {
   position: fixed;
-  top: calc(14px + var(--sat));
+  /* Responsive top offset: scales from 10px on small screens to 18px on desktop,
+     always pushed down by the iOS safe-area-inset-top */
+  top: calc(clamp(10px, 2vh, 18px) + var(--sat));
+  /* Perfect horizontal centering — equal left/right margins by construction */
   left: 50%;
   transform: translateX(-50%);
-  /* Modest viewport margin — pill never touches screen edges */
-  width: min(calc(100vw - 28px), 600px);
+  /* Responsive side gap: 16px on narrow screens, up to 24px on wide screens.
+     The pill never touches the viewport edge and never runs wider than 600px. */
+  width: min(calc(100vw - clamp(16px, 3vw, 24px) * 2), 600px);
   height: 52px;
   z-index: 120;
   /* auto 1fr auto: side buttons are content-sized, center area flexes */
