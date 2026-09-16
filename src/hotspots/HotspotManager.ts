@@ -41,8 +41,9 @@ export class HotspotManager {
       this.activeHotspots.push(view);
 
       // Convert spherical yaw & pitch to 3D world coordinates
+      // Invert yaw to match un-mirrored panorama orientation
       const phi = THREE.MathUtils.degToRad(90 - config.pitch);
-      const theta = THREE.MathUtils.degToRad(config.yaw);
+      const theta = THREE.MathUtils.degToRad(-config.yaw);
 
       const pos = new THREE.Vector3(
         sphereRadius * Math.sin(phi) * Math.sin(theta),

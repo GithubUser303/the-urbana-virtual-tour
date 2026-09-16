@@ -80,16 +80,14 @@
    ============================================================ */
 .top-bar {
   position: fixed;
-  /* Responsive top offset: scales from 10px on small screens to 18px on desktop,
-     always pushed down by the iOS safe-area-inset-top */
-  top: calc(clamp(10px, 2vh, 18px) + var(--sat));
+  /* Desktop responsive top offset: comfortable inset from the top */
+  top: calc(clamp(16px, 2.4vh, 26px) + var(--sat));
   /* Perfect horizontal centering — equal left/right margins by construction */
   left: 50%;
   transform: translateX(-50%);
-  /* --nav-margin: single source of truth for the outer side gap.
-     Media queries override this variable, not the width formula. */
-  --nav-margin: clamp(20px, 4vw, 48px);
-  width: min(calc(100vw - var(--nav-margin) * 2), 600px);
+  /* Desktop outer margin: fluid clamp with deliberate inset, never nearly edge-to-edge */
+  --desktop-nav-margin: clamp(28px, 5vw, 64px);
+  width: min(calc(100% - 2 * var(--desktop-nav-margin)), 560px);
   height: 52px;
   z-index: 120;
   /* auto 1fr auto: side buttons are content-sized, center area flexes */
@@ -116,13 +114,14 @@
   /* Stay in grid flow to preserve the 1fr center column, but also
      use absolute centering so the text centers against the whole pill */
   position: absolute;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   /* Pointer events pass through to underlying grid items for hover */
   pointer-events: none;
 
   font-family: var(--font-brand);
-  font-size: clamp(1.05rem, 2.4vw, 1.45rem);
+  font-size: clamp(1.15rem, 2.2vw, 1.45rem);
   font-weight: normal;
   color: var(--text-primary);
   text-align: center;
@@ -133,7 +132,7 @@
   white-space: nowrap;
   letter-spacing: 2px;
   /* Tall line-height prevents vertical clipping of glyphs */
-  line-height: 1.6;
+  line-height: 1.5;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
   /* overflow:visible is critical — do NOT use hidden/ellipsis on a script font */
   overflow: visible;
@@ -1226,14 +1225,16 @@ body.orientation-lock-active {
 @media (max-width: 768px) {
   .top-bar {
     /* Slightly tighter outer gap on tablets/medium screens */
-    --nav-margin: clamp(16px, 3vw, 32px);
+    --desktop-nav-margin: clamp(16px, 3vw, 32px);
+    width: min(calc(100% - 2 * var(--desktop-nav-margin)), 520px);
     height: 46px;
   }
 
   .top-brand {
-    font-size: clamp(1rem, 2.2vw, 1.2rem);
-    padding: 0 10px;
-    letter-spacing: 1px;
+    font-size: clamp(0.92rem, 2.2vw, 1.15rem);
+    padding: 2px 10px;
+    letter-spacing: 1.2px;
+    line-height: 1.35;
   }
 
   .nav-action-btn {
@@ -1300,13 +1301,18 @@ body.orientation-lock-active {
   .top-bar {
     top: calc(6px + var(--sat));
     height: 40px;
-    /* Compact but visible outer gap on landscape phones */
+    /* PRESERVE exact working mobile landscape outer margin */
     --nav-margin: clamp(12px, 2.5vw, 24px);
+    width: min(calc(100% - var(--nav-margin) * 2), 520px);
   }
 
   .top-brand {
-    font-size: clamp(0.92rem, 2vw, 1.12rem);
-    padding: 0 8px;
+    /* Reduced substantially on mobile landscape to fit comfortably without overlap/clipping */
+    font-size: clamp(0.72rem, 1.6vw, 0.85rem);
+    padding: 2px clamp(6px, 1.2vw, 10px);
+    letter-spacing: 1px;
+    line-height: 1.2;
+    overflow: visible;
   }
 
   .nav-action-btn {

@@ -50,7 +50,7 @@ export class TourState {
       selectedPhotoIndex: 0,
       isAudioMuted: !config.audio.enabled,
       isFullscreen: false,
-      cameraYaw: config.rooms[config.defaultRoomId]?.initialCamera.yaw ?? 0,
+      cameraYaw: -(config.rooms[config.defaultRoomId]?.initialCamera.yaw ?? 0),
       cameraPitch: config.rooms[config.defaultRoomId]?.initialCamera.pitch ?? 0,
       cameraFov: config.rooms[config.defaultRoomId]?.initialCamera.fov ?? 75
     };

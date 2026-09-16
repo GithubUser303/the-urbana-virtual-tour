@@ -55,20 +55,21 @@ export class Viewer360 {
     this.renderer.toneMappingExposure = 1.0;
     container.appendChild(this.renderer.domElement);
 
-    // 4. Sphere Meshes with BackSide for seamless unmirrored 360 projection
+    // 4. Sphere Meshes: Invert geometry along x-axis for unmirrored inside-facing equirectangular projection
     const sphereGeo = new THREE.SphereGeometry(500, 64, 40);
+    sphereGeo.scale(-1, 1, 1);
 
     this.materialA = new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 1.0,
       depthWrite: false,
-      side: THREE.BackSide
+      side: THREE.DoubleSide
     });
     this.materialB = new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0.0,
       depthWrite: false,
-      side: THREE.BackSide
+      side: THREE.DoubleSide
     });
 
     this.sphereMeshA = new THREE.Mesh(sphereGeo, this.materialA);
@@ -97,9 +98,9 @@ export class Viewer360 {
 
   public async initFirstRoom(): Promise<void> {
     const currentRoom = this.tourState.getCurrentRoom();
-    // Set initial camera orientation
+    // Set initial camera orientation (invert yaw to match un-mirrored panorama coordinate system)
     this.cameraControl.setOrientation(
-      currentRoom.initialCamera.yaw,
+      -currentRoom.initialCamera.yaw,
       currentRoom.initialCamera.pitch,
       currentRoom.initialCamera.fov,
       true
@@ -154,9 +155,9 @@ export class Viewer360 {
         this.tourState.setRoomLoading(false);
       }
 
-      // Smoothly orient camera toward room's preferred angle
+      // Smoothly orient camera toward room's preferred angle (invert yaw for un-mirrored space)
       this.cameraControl.setOrientation(
-        room.initialCamera.yaw,
+        -room.initialCamera.yaw,
         room.initialCamera.pitch,
         room.initialCamera.fov,
         false
