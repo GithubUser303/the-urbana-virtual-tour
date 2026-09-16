@@ -114,20 +114,20 @@
   justify-self: center;
   align-self: center;
 
-  font-family: var(--font-brand);
-  font-size: clamp(1.15rem, 2.2vw, 1.45rem);
-  font-weight: normal;
+  font-family: "Ms Madi", cursive;
+  font-size: clamp(1.4rem, 2.6vw, 1.85rem);
+  font-weight: 400;
   color: var(--text-primary);
   text-align: center;
-  /* Vertical padding clears script font ascenders/descenders;
+  /* Vertical padding ensures optical vertical centering;
      horizontal padding provides comfortable breathing room between text and left/right dividers */
-  padding: clamp(6px, 1.4vh, 10px) clamp(16px, 2.2vw, 26px);
+  padding: clamp(3px, 0.8vh, 6px) clamp(16px, 2.2vw, 26px);
   border-left: 1px solid rgba(255, 255, 255, 0.12);
   border-right: 1px solid rgba(255, 255, 255, 0.12);
   white-space: nowrap;
-  letter-spacing: 2px;
-  /* Tall line-height prevents vertical clipping of glyphs */
-  line-height: 1.0;
+  letter-spacing: normal;
+  /* Balanced line-height for Ms Madi cursive script font metrics */
+  line-height: 1.1;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
   /* overflow:visible is critical — do NOT use hidden/ellipsis on a script font */
   overflow: visible;
@@ -1228,10 +1228,10 @@ body.orientation-lock-active {
   }
 
   .top-brand {
-    font-size: clamp(0.92rem, 2.2vw, 1.15rem);
+    font-size: clamp(1.15rem, 2.2vw, 1.45rem);
     padding: 2px clamp(12px, 1.8vw, 20px);
-    letter-spacing: 1.2px;
-    line-height: 1.35;
+    letter-spacing: normal;
+    line-height: 1.1;
   }
 
   .nav-action-btn {
@@ -1312,11 +1312,11 @@ body.orientation-lock-active {
   }
 
   .top-brand {
-    /* Reduced substantially on mobile landscape to fit comfortably without overlap/clipping */
-    font-size: clamp(0.72rem, 1.6vw, 0.85rem);
+    /* Responsive sizing for mobile landscape with Ms Madi cursive metrics */
+    font-size: clamp(0.92rem, 1.8vw, 1.15rem);
     padding: 1px clamp(10px, 1.6vw, 16px);
-    letter-spacing: 1px;
-    line-height: 1.2;
+    letter-spacing: normal;
+    line-height: 1.05;
     overflow: visible;
   }
 

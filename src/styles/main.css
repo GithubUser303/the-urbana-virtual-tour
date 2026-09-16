@@ -1,27 +1,5 @@
-@font-face {
-  font-family: 'Journey Begins';
-  src: url('../assets/fonts/journey-begins-demo.woff2') format('woff2'),
-       url('../assets/fonts/journey-begins-demo.ttf') format('truetype'),
-       url('/assets/fonts/journey-begins-demo.woff2') format('woff2'),
-       url('/assets/fonts/journey-begins-demo.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'UrbanaBrand';
-  src: url('../assets/fonts/journey-begins-demo.woff2') format('woff2'),
-       url('../assets/fonts/journey-begins-demo.ttf') format('truetype'),
-       url('/assets/fonts/journey-begins-demo.woff2') format('woff2'),
-       url('/assets/fonts/journey-begins-demo.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
 :root {
-  --font-brand: 'Journey Begins', 'UrbanaBrand', 'Cinzel', 'Playfair Display', Georgia, serif;
+  --font-brand: 'Ms Madi', cursive;
   --font-sans: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
   /* Premium Tinted Glass Palette (Lighter, Translucent Tint) */

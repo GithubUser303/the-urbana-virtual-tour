@@ -3,7 +3,6 @@ import { PropertyConfig } from './types';
 export const propertyConfig: PropertyConfig = {
   projectName: 'the Urbana',
   credits: 'Experience by Lost in Renders',
-  projectFont: '/assets/fonts/journey-begins-demo.ttf',
   defaultRoomId: 'living',
 
   contact: {
