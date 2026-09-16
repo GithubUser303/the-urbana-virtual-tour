@@ -13,6 +13,7 @@ export class OrientationPrompt {
 
   constructor() {
     this.element = this.createElement();
+    // Mount directly on body so position:fixed resolves against the true viewport
     document.body.appendChild(this.element);
 
     this.checkOrientation = this.checkOrientation.bind(this);
@@ -32,9 +33,18 @@ export class OrientationPrompt {
       } catch (_) {}
     }
 
-    // Initial check
-    this.checkOrientation();
+    // Wait for custom fonts to load before the initial orientation check so
+    // the layout is stable and the brand font renders correctly.
+    if ('fonts' in document) {
+      (document as any).fonts.ready.then(() => {
+        this.checkOrientation();
+      });
+    } else {
+      // Fallback for browsers without document.fonts
+      this.checkOrientation();
+    }
   }
+
 
   private createElement(): HTMLElement {
     const backdrop = document.createElement('div');

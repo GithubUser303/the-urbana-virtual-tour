@@ -91,6 +91,8 @@
   align-items: center;
   padding: 0 clamp(8px, 1.8vw, 16px);
   border-radius: 26px;
+  /* Allow script font ascenders/descenders to render outside the 52px fixed height */
+  overflow: visible;
   transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
               opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -106,15 +108,19 @@
   font-weight: normal;
   color: var(--text-primary);
   text-align: center;
-  padding: 2px clamp(8px, 2vw, 24px);
+  /* Generous vertical padding so script font ascenders/descenders clear the bar edges */
+  padding: clamp(6px, 1.4vh, 10px) clamp(8px, 2vw, 24px);
   border-left: 1px solid rgba(255, 255, 255, 0.12);
   border-right: 1px solid rgba(255, 255, 255, 0.12);
   white-space: nowrap;
   letter-spacing: 2px;
-  line-height: 1.25;
+  /* Tall line-height prevents vertical clipping of glyphs with deep ascenders/descenders */
+  line-height: 1.6;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* overflow:visible is critical — do NOT use hidden/ellipsis on a script font */
+  overflow: visible;
+  /* Ensure the element itself can grow vertically to accommodate the line-height */
+  align-self: center;
 }
 
 .top-bar > *:last-child {
@@ -1361,3 +1367,147 @@ body.orientation-lock-active {
   }
 }
 
+/* ============================================================
+   ORIENTATION PROMPT — Portrait-mode overlay for phones
+   Uses fixed + inset:0 + dvh to fill the true viewport
+   ============================================================ */
+
+/* Prevent tour interaction while portrait prompt is active —
+   #app contains all tour UI; the prompt itself sits directly on body */
+body.orientation-lock-active #app {
+  pointer-events: none;
+}
+
+.orientation-prompt {
+  /* True full-viewport overlay — fixed, not absolute */
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  /* dvh: accounts for mobile browser chrome appearing/disappearing */
+  height: 100dvh;
+  /* Safe fallback for browsers without dvh support */
+  height: 100vh;
+  height: 100dvh;
+
+  z-index: 99999;
+
+  /* Center the card both axes */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Frosted-glass background matching site aesthetic */
+  background: rgba(6, 7, 9, 0.88);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+
+  /* Prevent any horizontal overflow or clipping */
+  overflow: hidden;
+
+  /* Safe-area padding so content never hides under notches/home indicators */
+  padding: calc(16px + var(--sat)) calc(16px + var(--sal)) calc(16px + var(--sab)) calc(16px + var(--sar));
+
+  /* Hidden by default — shown when .active is added */
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orientation-prompt.active {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+/* Card: glassy content panel */
+.orientation-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 3vh, 24px);
+
+  /* Constrain so it never stretches to full viewport width */
+  width: min(340px, calc(100vw - 48px));
+  max-width: 100%;
+
+  padding: clamp(24px, 5vh, 40px) clamp(20px, 5vw, 36px);
+  border-radius: 24px;
+  background: var(--glass-bg, rgba(22, 28, 38, 0.55));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.15));
+  box-shadow: var(--glass-shadow, 0 16px 40px rgba(0, 0, 0, 0.5));
+  text-align: center;
+
+  /* Prevent any internal content overflow */
+  overflow: hidden;
+}
+
+/* Title */
+.orientation-title {
+  font-family: var(--font-sans);
+  font-size: clamp(0.95rem, 3.5vw, 1.2rem);
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--text-primary);
+  line-height: 1.4;
+  /* Do NOT clip text */
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Rotating phone icon wrapper */
+.orientation-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Keeps icon fully visible with comfortable breathing room */
+  padding: 6px;
+  flex-shrink: 0;
+}
+
+/* Phone SVG icon — scales with viewport */
+.orientation-phone-icon {
+  width: clamp(40px, 10vw, 64px);
+  height: clamp(40px, 10vw, 64px);
+  color: var(--accent-gold, #e2b96f);
+  /* Subtle continuous rotate animation */
+  animation: orientationRotate 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  /* Prevent icon from being clipped by parent */
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+@keyframes orientationRotate {
+  0%   { transform: rotate(0deg);   }
+  30%  { transform: rotate(-90deg); }
+  60%  { transform: rotate(-90deg); }
+  90%  { transform: rotate(0deg);   }
+  100% { transform: rotate(0deg);   }
+}
+
+/* Descriptive paragraph */
+.orientation-desc {
+  font-family: var(--font-sans);
+  font-size: clamp(0.72rem, 2.5vw, 0.88rem);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  letter-spacing: 0.5px;
+  /* No overflow clipping */
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* "LANDSCAPE MODE" emphasis span */
+.orientation-desc span {
+  display: block;
+  margin-top: 4px;
+  font-size: clamp(0.78rem, 2.8vw, 0.95rem);
+  font-weight: 600;
+  letter-spacing: clamp(1.5px, 0.5vw, 3px);
+  text-transform: uppercase;
+  color: var(--accent-gold, #e2b96f);
+}
