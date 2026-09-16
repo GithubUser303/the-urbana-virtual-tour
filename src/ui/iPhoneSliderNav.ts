@@ -351,10 +351,10 @@ export class iPhoneSliderNav {
         }
       }
 
-      // Natural drag direction:
-      // Dragging LEFT (deltaX < 0) -> targetLeft decreases (moves LEFT)
-      // Dragging RIGHT (deltaX > 0) -> targetLeft increases (moves RIGHT)
-      let targetLeft = this.startThumbLeft + deltaX;
+      // Inverted carousel drag direction:
+      // Dragging LEFT (deltaX < 0) -> targetLeft increases (moves RIGHT)
+      // Dragging RIGHT (deltaX > 0) -> targetLeft decreases (moves LEFT)
+      let targetLeft = this.startThumbLeft - deltaX;
 
       // Strict constraints: clamp strictly between Living Room (index 0) and Bathroom (index 5)
       targetLeft = Math.max(bounds.minLeft, Math.min(bounds.maxLeft, targetLeft));
