@@ -88,7 +88,7 @@
   /* Desktop outer margin: fluid clamp with deliberate inset, never nearly edge-to-edge */
   --desktop-nav-margin: clamp(28px, 5vw, 64px);
   width: min(calc(100% - 2 * var(--desktop-nav-margin)), 480px);
-  height: 52px;
+  height: 55px;
   z-index: 120;
   /* 1fr auto 1fr: symmetrical left and right zones with auto-sized center title */
   display: grid;
