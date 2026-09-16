@@ -87,38 +87,32 @@
   transform: translateX(-50%);
   /* Desktop outer margin: fluid clamp with deliberate inset, never nearly edge-to-edge */
   --desktop-nav-margin: clamp(28px, 5vw, 64px);
-  width: min(calc(100% - 2 * var(--desktop-nav-margin)), 560px);
+  width: min(calc(100% - 2 * var(--desktop-nav-margin)), 520px);
   height: 52px;
   z-index: 120;
-  /* auto 1fr auto: side buttons are content-sized, center area flexes */
+  /* 1fr auto 1fr: symmetrical left and right zones with auto-sized center title */
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  /* Comfortable inner padding, not too loose */
+  justify-items: center;
+  /* Comfortable inner padding */
   padding: 0 clamp(6px, 1.2vw, 12px);
   border-radius: 26px;
-  /* A fixed element is already a containing block for absolute children */
   /* Allow script font ascenders/descenders to render outside the 52px fixed height */
   overflow: visible;
   transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
               opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* Left Zone: Contact Us centered in its 1fr column */
 .top-bar > *:first-child {
-  justify-self: start;
+  justify-self: center;
 }
 
-/* Center title: absolutely positioned so it is always mathematically
-   centered in the full pill width, independent of button widths */
+/* Center Zone: the Urbana centered in its auto column */
 .top-brand {
-  /* Stay in grid flow to preserve the 1fr center column, but also
-     use absolute centering so the text centers against the whole pill */
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  /* Pointer events pass through to underlying grid items for hover */
-  pointer-events: none;
+  justify-self: center;
+  align-self: center;
 
   font-family: var(--font-brand);
   font-size: clamp(1.15rem, 2.2vw, 1.45rem);
@@ -138,8 +132,9 @@
   overflow: visible;
 }
 
+/* Right Zone: Gallery centered in its 1fr column */
 .top-bar > *:last-child {
-  justify-self: end;
+  justify-self: center;
 }
 
 /* Contact Us / Gallery — compact, content-hugging buttons */
