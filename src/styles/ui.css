@@ -87,16 +87,15 @@
   transform: translateX(-50%);
   /* Desktop outer margin: fluid clamp with deliberate inset, never nearly edge-to-edge */
   --desktop-nav-margin: clamp(28px, 5vw, 64px);
-  width: min(calc(100% - 2 * var(--desktop-nav-margin)), 520px);
+  width: min(calc(100% - 2 * var(--desktop-nav-margin)), 480px);
   height: 52px;
   z-index: 120;
   /* 1fr auto 1fr: symmetrical left and right zones with auto-sized center title */
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-items: center;
   /* Comfortable inner padding */
-  padding: 0 clamp(6px, 1.2vw, 12px);
+  padding: 0 clamp(8px, 1.4vw, 16px);
   border-radius: 26px;
   /* Allow script font ascenders/descenders to render outside the 52px fixed height */
   overflow: visible;
@@ -104,9 +103,10 @@
               opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Left Zone: Contact Us centered in its 1fr column */
+/* Left Zone: Contact Us aligned toward the center divider with exact gap */
 .top-bar > *:first-child {
-  justify-self: center;
+  justify-self: end;
+  margin-right: clamp(14px, 2.4vw, 22px);
 }
 
 /* Center Zone: the Urbana centered in its auto column */
@@ -132,9 +132,10 @@
   overflow: visible;
 }
 
-/* Right Zone: Gallery centered in its 1fr column */
+/* Right Zone: Gallery aligned toward the center divider with exact same gap */
 .top-bar > *:last-child {
-  justify-self: center;
+  justify-self: start;
+  margin-left: clamp(14px, 2.4vw, 22px);
 }
 
 /* Contact Us / Gallery — compact, content-hugging buttons */
@@ -1298,7 +1299,15 @@ body.orientation-lock-active {
     height: 40px;
     /* PRESERVE exact working mobile landscape outer margin */
     --nav-margin: clamp(12px, 2.5vw, 24px);
-    width: min(calc(100% - var(--nav-margin) * 2), 520px);
+    width: min(calc(100% - var(--nav-margin) * 2), 480px);
+  }
+
+  .top-bar > *:first-child {
+    margin-right: clamp(8px, 1.8vw, 14px);
+  }
+
+  .top-bar > *:last-child {
+    margin-left: clamp(8px, 1.8vw, 14px);
   }
 
   .top-brand {
