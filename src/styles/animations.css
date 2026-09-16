@@ -1,0 +1,107 @@
+/* Keyframes & Motion Dynamics */
+
+/* Hotspot Ambient Breathing (Section 7) */
+@keyframes hotspotBreathing {
+  0% {
+    transform: scale(1);
+    opacity: 0.84;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.84;
+  }
+}
+
+.hotspot-breather {
+  animation: hotspotBreathing 3.6s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Organic Crop/Wind Sway for Scattered Gallery (Section 25) */
+@keyframes organicWindSway {
+  0% {
+    transform: translate3d(calc(var(--scatter-x) + var(--parallax-x)), calc(var(--scatter-y) + var(--parallax-y)), 0)
+               rotate(var(--base-rot))
+               translate(0, 0);
+  }
+  25% {
+    transform: translate3d(calc(var(--scatter-x) + var(--parallax-x)), calc(var(--scatter-y) + var(--parallax-y)), 0)
+               rotate(calc(var(--base-rot) + 1.2deg))
+               translate(2px, -1.5px);
+  }
+  50% {
+    transform: translate3d(calc(var(--scatter-x) + var(--parallax-x)), calc(var(--scatter-y) + var(--parallax-y)), 0)
+               rotate(calc(var(--base-rot) - 0.8deg))
+               translate(-2px, 2px);
+  }
+  75% {
+    transform: translate3d(calc(var(--scatter-x) + var(--parallax-x)), calc(var(--scatter-y) + var(--parallax-y)), 0)
+               rotate(calc(var(--base-rot) - 1.4deg))
+               translate(1.5px, -1px);
+  }
+  100% {
+    transform: translate3d(calc(var(--scatter-x) + var(--parallax-x)), calc(var(--scatter-y) + var(--parallax-y)), 0)
+               rotate(var(--base-rot))
+               translate(0, 0);
+  }
+}
+
+/* Control Arrow Rotation (^ <-> v) */
+.control-arrow-icon {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center center;
+}
+
+.control-arrow-icon.rotated {
+  transform: rotate(180deg);
+}
+
+/* Radar Cone Subtle Glow Pulse */
+@keyframes radarPulse {
+  0%, 100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* Hide UI Transitions (Section 41) */
+.ui-hidden-top {
+  transform: translate(-50%, calc(-120% - var(--sat))) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.ui-hidden-bottom {
+  transform: translate(-50%, calc(130% + var(--sab))) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.ui-hidden-corner {
+  transform: scale(0.85) translate(40px, 40px) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.ui-hidden-fade {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Reduced Motion Override (Section 59) */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+

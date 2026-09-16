@@ -1,0 +1,77 @@
+/* Tinted Glass Design System with Cursor-Following Light */
+
+.glass-panel {
+  position: relative;
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: background-color 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+              transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Cursor-Following Radial Highlight Layer (Single-Target) */
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    180px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 80%
+  );
+  opacity: var(--glow-opacity, 0);
+  transition: opacity 0.25s ease;
+  z-index: 1;
+}
+
+/* Subtle Inner Rim Highlight */
+.glass-panel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Interactive Glass Micro-Interactions */
+.glass-interactive {
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+              border-color 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.glass-interactive:hover {
+  background-color: var(--glass-bg-hover);
+  border-color: var(--glass-border-highlight);
+  transform: translateY(-1px);
+}
+
+.glass-interactive:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* Fallback for devices with low performance or backdrop-filter unsupported */
+@supports not (backdrop-filter: blur(10px)) {
+  .glass-panel {
+    background-color: rgba(12, 14, 18, 0.92);
+  }
+}
+
