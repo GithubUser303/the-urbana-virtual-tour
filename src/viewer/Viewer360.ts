@@ -219,14 +219,21 @@ export class Viewer360 {
     }
   }
 
-  private onWindowResize(): void {
+  public resize(): void {
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
+    if (width === 0 || height === 0) return;
 
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
 
-    this.renderer.setSize(width, height);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.renderer.setPixelRatio(dpr);
+    this.renderer.setSize(width, height, true);
+  }
+
+  private onWindowResize(): void {
+    this.resize();
   }
 
   private animate(): void {

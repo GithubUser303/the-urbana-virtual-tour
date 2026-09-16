@@ -85,9 +85,9 @@
   transform: translateX(-50%);
   width: min(calc(100vw - 32px), 580px);
   height: 52px;
-  z-index: 100;
-  display: flex;
-  justify-content: space-between;
+  z-index: 120;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 0 clamp(8px, 1.8vw, 16px);
   border-radius: 26px;
@@ -95,8 +95,13 @@
               opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.top-bar > *:first-child {
+  justify-self: start;
+}
+
 .top-brand {
-  font-family: 'Journey Begins', var(--font-serif);
+  justify-self: center;
+  font-family: var(--font-brand);
   font-size: clamp(1.05rem, 2.4vw, 1.45rem);
   font-weight: normal;
   color: var(--text-primary);
@@ -110,7 +115,10 @@
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 0 1 auto;
+}
+
+.top-bar > *:last-child {
+  justify-self: end;
 }
 
 .nav-action-btn {
@@ -319,25 +327,30 @@
    ============================================================ */
 .floorplan-panel {
   position: fixed;
-  bottom: calc(24px + var(--sab));
-  right: calc(24px + var(--sar));
-  z-index: 110;
-  width: 220px;
-  border-radius: 22px;
-  transition: width 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
-              height 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
-              transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
-              opacity 0.45s ease;
-  will-change: width, height, transform;
+  bottom: calc(20px + var(--sab));
+  right: calc(20px + var(--sar));
+  z-index: 105;
+  width: clamp(170px, 16vw, 220px);
+  max-height: calc(100dvh - 75px - var(--sat) - var(--sab));
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+              transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+              opacity 0.4s ease;
+  will-change: width, transform;
 }
 
 .floorplan-header {
-  padding: 12px 16px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .floorplan-title-group {
@@ -347,7 +360,7 @@
 }
 
 .floorplan-title {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -355,7 +368,7 @@
 }
 
 .floorplan-current-room {
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 500;
   color: var(--text-primary);
   letter-spacing: 0.5px;
@@ -377,24 +390,27 @@
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  transition: max-height 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+  flex: 1 1 auto;
+  min-height: 0;
+  transition: max-height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
               opacity 0.35s ease;
 }
 
 .floorplan-panel.expanded {
-  width: min(340px, 90vw);
+  width: min(320px, 30vw);
 }
 
 .floorplan-panel.expanded .floorplan-body {
-  max-height: 380px;
+  max-height: min(360px, calc(100dvh - 130px - var(--sat) - var(--sab)));
   opacity: 1;
 }
 
 .floorplan-blueprint-wrapper {
   position: relative;
-  width: calc(100% - 24px);
-  margin: 6px 12px 14px 12px;
+  width: calc(100% - 20px);
+  margin: 4px 10px 10px 10px;
   aspect-ratio: 1312 / 1199;
+  max-height: calc(100dvh - 140px - var(--sat) - var(--sab));
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
@@ -402,11 +418,10 @@
 
 .floorplan-image {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: fill;
+  object-fit: contain;
   border-radius: 12px;
   filter: brightness(0.92) contrast(1.08);
   display: block;
@@ -414,7 +429,7 @@
 
 .floorplan-svg-overlay {
   position: absolute;
-  top: 0;
+  inset: 0;
   left: 0;
   width: 100%;
   height: 100%;
@@ -1189,8 +1204,8 @@ body.orientation-lock-active {
   }
 
   .top-brand {
-    font-size: 1.15rem;
-    padding: 0 12px;
+    font-size: clamp(1rem, 2.2vw, 1.2rem);
+    padding: 0 10px;
     letter-spacing: 1px;
   }
 
@@ -1234,6 +1249,14 @@ body.orientation-lock-active {
     letter-spacing: 1.2px;
   }
 
+  .scatter-card {
+    --card-w: 220px !important;
+    --card-h: 155px !important;
+  }
+}
+
+/* Tablet portrait orientation: lift floorplan slightly to avoid bottom slider overlap */
+@media (max-width: 768px) and (orientation: portrait) {
   .floorplan-panel {
     bottom: calc(88px + var(--sab));
     right: calc(14px + var(--sar));
@@ -1241,64 +1264,100 @@ body.orientation-lock-active {
   }
 
   .floorplan-panel.expanded {
-    width: min(300px, 86vw);
-  }
-
-  .scatter-card {
-    --card-w: 220px !important;
-    --card-h: 155px !important;
+    width: min(290px, 86vw);
   }
 }
 
-@media (max-width: 480px) {
-  .top-brand {
-    padding: 0 8px;
-    font-size: 1.05rem;
-  }
-
-  .iphone-slider-wrapper {
-    bottom: calc(12px + var(--sab));
-  }
-
-  .floorplan-panel {
-    bottom: calc(90px + var(--sab));
-  }
-}
-
-@media (max-height: 500px) and (orientation: landscape) {
+/* Mobile landscape orientation & compact height phones */
+@media (orientation: landscape) and (max-height: 550px), (max-height: 500px) {
   .top-bar {
     top: calc(6px + var(--sat));
     height: 40px;
-    padding: 0 10px;
+    width: min(calc(100vw - 24px), 500px);
+    padding: 0 8px;
   }
 
   .top-brand {
-    font-size: 1.12rem;
-    padding: 0 10px;
+    font-size: clamp(0.92rem, 2vw, 1.12rem);
+    padding: 0 8px;
   }
 
   .nav-action-btn {
-    font-size: 0.68rem;
-    padding: 4px 8px;
+    font-size: 0.66rem;
+    padding: 4px 6px;
   }
 
   .iphone-slider-wrapper {
     bottom: calc(6px + var(--sab));
-    gap: 3px;
+    gap: 2px;
   }
 
+  .iphone-slider-track {
+    padding: 2px 4px;
+    max-width: calc(100vw - 16px);
+  }
+
+  .iphone-slider-items {
+    gap: clamp(2px, 0.5vw, 4px);
+  }
+
+  .iphone-slider-item {
+    padding: 3px clamp(4px, 0.6vw, 7px);
+    gap: 2px;
+  }
+
+  .iphone-slider-icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .iphone-slider-icon svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .iphone-slider-label {
+    font-size: 0.5rem;
+  }
+
+  .credits-text {
+    font-size: 0.55rem;
+    letter-spacing: 0.8px;
+  }
+
+  /* Compact bottom-right corner floorplan on landscape mobile */
   .floorplan-panel {
-    bottom: calc(6px + var(--sab));
-    right: calc(10px + var(--sar));
-    width: 160px;
+    bottom: calc(8px + var(--sab)) !important;
+    right: calc(10px + var(--sar)) !important;
+    width: clamp(135px, 18vw, 165px);
+    max-height: calc(100dvh - 56px - var(--sat) - var(--sab));
+  }
+
+  .floorplan-header {
+    padding: 6px 10px;
+  }
+
+  .floorplan-title {
+    font-size: 0.56rem;
+    letter-spacing: 1px;
+  }
+
+  .floorplan-current-room {
+    font-size: 0.72rem;
   }
 
   .floorplan-panel.expanded {
-    width: min(260px, 45vw);
+    width: min(220px, 32vw);
   }
 
   .floorplan-panel.expanded .floorplan-body {
-    max-height: 220px;
+    max-height: calc(100dvh - 72px - var(--sat) - var(--sab));
+  }
+
+  .floorplan-blueprint-wrapper {
+    margin: 3px 6px 6px 6px;
+    width: calc(100% - 12px);
+    max-height: calc(100dvh - 100px - var(--sat) - var(--sab));
   }
 }
 

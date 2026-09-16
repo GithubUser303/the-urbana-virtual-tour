@@ -242,7 +242,11 @@ export class iPhoneSliderNav {
 
     // 3. Window resize and orientation changes
     window.addEventListener('resize', realign);
-    window.addEventListener('orientationchange', realign);
+    window.addEventListener('orientationchange', () => {
+      realign();
+      setTimeout(realign, 100);
+      setTimeout(realign, 300);
+    });
 
     // Initial frame alignment
     requestAnimationFrame(() => {
