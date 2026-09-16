@@ -86,9 +86,10 @@
   /* Perfect horizontal centering — equal left/right margins by construction */
   left: 50%;
   transform: translateX(-50%);
-  /* Responsive side gap: 16px on narrow screens, up to 24px on wide screens.
-     The pill never touches the viewport edge and never runs wider than 600px. */
-  width: min(calc(100vw - clamp(16px, 3vw, 24px) * 2), 600px);
+  /* --nav-margin: single source of truth for the outer side gap.
+     Media queries override this variable, not the width formula. */
+  --nav-margin: clamp(20px, 4vw, 48px);
+  width: min(calc(100vw - var(--nav-margin) * 2), 600px);
   height: 52px;
   z-index: 120;
   /* auto 1fr auto: side buttons are content-sized, center area flexes */
@@ -1224,9 +1225,9 @@ body.orientation-lock-active {
    ============================================================ */
 @media (max-width: 768px) {
   .top-bar {
-    width: min(calc(100vw - 20px), 520px);
+    /* Slightly tighter outer gap on tablets/medium screens */
+    --nav-margin: clamp(16px, 3vw, 32px);
     height: 46px;
-    padding: 0 10px;
   }
 
   .top-brand {
@@ -1299,8 +1300,8 @@ body.orientation-lock-active {
   .top-bar {
     top: calc(6px + var(--sat));
     height: 40px;
-    width: min(calc(100vw - 24px), 500px);
-    padding: 0 8px;
+    /* Compact but visible outer gap on landscape phones */
+    --nav-margin: clamp(12px, 2.5vw, 24px);
   }
 
   .top-brand {
