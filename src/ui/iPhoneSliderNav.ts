@@ -104,9 +104,12 @@ export class iPhoneSliderNav {
   ];
 
   private itemElements: HTMLElement[] = [];
+  private locationBtn!: HTMLElement;
   private activeIndex = 0;
   private isDragging = false;
+  private justDragged = false;
   private startPointerX = 0;
+  private startPointerY = 0;
   private startThumbLeft = 0;
   private currentThumbLeft = 0;
   private candidateIndex = 0;
@@ -123,7 +126,7 @@ export class iPhoneSliderNav {
     this.track.className = 'iphone-slider-track glass-panel';
     this.track.setAttribute('aria-label', 'Page navigation slider');
 
-    // Draggable Glass Lens Thumb (Clean, seamless highlight)
+    // Draggable Glass Lens Thumb (Smooth sliding capsule)
     this.thumb = document.createElement('div');
     this.thumb.className = 'iphone-slider-thumb';
 
@@ -143,8 +146,9 @@ export class iPhoneSliderNav {
         <span class="iphone-slider-label">${item.shortName}</span>
       `;
 
-      // Direct click / tap immediately snaps to page
+      // Direct click / tap immediately triggers sliding animation & page navigation
       btn.addEventListener('click', (e) => {
+        if (this.justDragged) return;
         e.stopPropagation();
         this.snapToIndex(index, true);
       });
@@ -154,10 +158,10 @@ export class iPhoneSliderNav {
     });
 
     // Location button matching reference design
-    const locationBtn = document.createElement('button');
-    locationBtn.className = 'iphone-slider-item iphone-location-btn glass-interactive';
-    locationBtn.setAttribute('aria-label', 'Open Property Location');
-    locationBtn.innerHTML = `
+    this.locationBtn = document.createElement('button');
+    this.locationBtn.className = 'iphone-slider-item iphone-location-btn glass-interactive';
+    this.locationBtn.setAttribute('aria-label', 'Open Property Location');
+    this.locationBtn.innerHTML = `
       <span class="iphone-slider-icon">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
@@ -168,17 +172,14 @@ export class iPhoneSliderNav {
     `;
 
     const openMapModal = (e: Event) => {
+      if (this.justDragged) return;
       e.stopPropagation();
       e.preventDefault();
       this.tourState.openModal('location');
     };
 
-    locationBtn.addEventListener('pointerdown', (e) => {
-      e.stopPropagation();
-    });
-    locationBtn.addEventListener('click', openMapModal);
-    locationBtn.addEventListener('touchend', openMapModal);
-    this.itemsContainer.appendChild(locationBtn);
+    this.locationBtn.addEventListener('click', openMapModal);
+    this.itemsContainer.appendChild(this.locationBtn);
 
     // Assemble track
     this.track.appendChild(this.thumb);
@@ -270,7 +271,7 @@ export class iPhoneSliderNav {
 
   private setThumbGeometry(left: number, width: number, animated = true): void {
     if (animated) {
-      this.thumb.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.25), width 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.25)';
+      this.thumb.style.transition = 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), width 0.45s cubic-bezier(0.25, 1, 0.5, 1)';
     } else {
       this.thumb.style.transition = 'none';
     }
@@ -295,7 +296,7 @@ export class iPhoneSliderNav {
       if (i === 0) {
         minLeft = left;
       }
-      // Constraint: bathroom is index 5 (last room)
+      // Constraint: bathroom is index 5 (last room before map)
       if (i === this.itemElements.length - 1) {
         maxLeft = left;
       }
@@ -306,29 +307,25 @@ export class iPhoneSliderNav {
 
   private initDragHandlers(): void {
     let bounds = this.getItemBounds();
+    let pointerId = -1;
 
     const onPointerDown = (e: PointerEvent) => {
       // Ignore non-primary click
       if (e.button !== 0 && e.pointerType === 'mouse') return;
 
-      // Do not initiate slider drag if interacting with the map button
+      // Do not initiate slider drag if clicking the map button
       const target = e.target as HTMLElement | null;
       if (target?.closest('.iphone-location-btn')) {
         return;
       }
 
       bounds = this.getItemBounds();
-      this.isDragging = true;
       this.startPointerX = e.clientX;
+      this.startPointerY = e.clientY;
       this.startThumbLeft = this.currentThumbLeft;
       this.candidateIndex = this.activeIndex;
-
-      this.thumb.classList.add('dragging');
-      this.track.classList.add('dragging');
-
-      try {
-        this.track.setPointerCapture(e.pointerId);
-      } catch (_) {}
+      this.isDragging = false;
+      pointerId = e.pointerId;
 
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
@@ -336,13 +333,30 @@ export class iPhoneSliderNav {
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      if (!this.isDragging) return;
-
       const deltaX = e.clientX - this.startPointerX;
+      const deltaY = e.clientY - this.startPointerY;
+
+      // Click vs Drag threshold: only activate drag if moved > 6px horizontally
+      if (!this.isDragging) {
+        if (Math.abs(deltaX) > 6 && Math.abs(deltaX) > Math.abs(deltaY)) {
+          this.isDragging = true;
+          this.thumb.classList.add('dragging');
+          this.track.classList.add('dragging');
+
+          try {
+            this.track.setPointerCapture(pointerId);
+          } catch (_) {}
+        } else {
+          return;
+        }
+      }
+
+      // Natural drag direction:
+      // Dragging LEFT (deltaX < 0) -> targetLeft decreases (moves LEFT)
+      // Dragging RIGHT (deltaX > 0) -> targetLeft increases (moves RIGHT)
       let targetLeft = this.startThumbLeft + deltaX;
 
-      // Strict constraints: cannot drag further left than Living Room (index 0)
-      // or further right than Bathroom (index 5)
+      // Strict constraints: clamp strictly between Living Room (index 0) and Bathroom (index 5)
       targetLeft = Math.max(bounds.minLeft, Math.min(bounds.maxLeft, targetLeft));
       this.currentThumbLeft = targetLeft;
 
@@ -367,28 +381,33 @@ export class iPhoneSliderNav {
         this.highlightCandidate(closestIdx);
       }
 
-      // Smoothly interpolate thumb width to match current candidate item snugly
+      // Smoothly interpolate thumb width to match candidate item snugly
       const candidateWidth = bounds.widths[closestIdx] || 48;
       this.setThumbGeometry(targetLeft, candidateWidth, false);
     };
 
-    const onPointerUp = (e: PointerEvent) => {
-      if (!this.isDragging) return;
-      this.isDragging = false;
-
-      this.thumb.classList.remove('dragging');
-      this.track.classList.remove('dragging');
-
-      try {
-        this.track.releasePointerCapture(e.pointerId);
-      } catch (_) {}
-
+    const onPointerUp = () => {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
       window.removeEventListener('pointercancel', onPointerUp);
 
-      // Snap cleanly to the nearest defined page position
-      this.snapToIndex(this.candidateIndex, true);
+      if (this.isDragging) {
+        this.isDragging = false;
+        this.justDragged = true;
+        setTimeout(() => {
+          this.justDragged = false;
+        }, 120);
+
+        this.thumb.classList.remove('dragging');
+        this.track.classList.remove('dragging');
+
+        try {
+          this.track.releasePointerCapture(pointerId);
+        } catch (_) {}
+
+        // Snap cleanly to the nearest defined page position
+        this.snapToIndex(this.candidateIndex, true);
+      }
     };
 
     this.track.addEventListener('pointerdown', onPointerDown);
@@ -404,6 +423,9 @@ export class iPhoneSliderNav {
     });
   }
 
+  /**
+   * Snaps the navigation to the specified index with a smooth sliding capsule animation
+   */
   public snapToIndex(index: number, notifyState = true): void {
     if (index < 0 || index >= this.items.length) return;
 
@@ -420,12 +442,20 @@ export class iPhoneSliderNav {
       }
     });
 
-    // Re-align thumb smoothly to live position of the activated element
-    requestAnimationFrame(() => {
-      this.realignActiveThumb(true);
-    });
+    // Smoothly animate the glass thumb capsule to the target item position and width
+    const targetEl = this.itemElements[index];
+    if (targetEl) {
+      const trackRect = this.track.getBoundingClientRect();
+      const itemRect = targetEl.getBoundingClientRect();
+      if (trackRect.width > 0 && itemRect.width > 0) {
+        const targetLeft = itemRect.left - trackRect.left;
+        const targetWidth = itemRect.width;
+        this.currentThumbLeft = targetLeft;
+        this.setThumbGeometry(targetLeft, targetWidth, true);
+      }
+    }
 
-    // ONLY load the page at the current snap position when requested
+    // Load the page at the current snap position
     if (notifyState) {
       const selectedItem = this.items[index];
       if (selectedItem && selectedItem.type === 'room') {

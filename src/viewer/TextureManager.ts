@@ -78,6 +78,7 @@ export class TextureManager {
           texture.minFilter = THREE.LinearFilter;
           texture.magFilter = THREE.LinearFilter;
           texture.generateMipmaps = false;
+          texture.anisotropy = 8;
           texture.needsUpdate = true;
           resolve(texture);
         } catch (err) {
@@ -87,6 +88,7 @@ export class TextureManager {
           texture.minFilter = THREE.LinearFilter;
           texture.magFilter = THREE.LinearFilter;
           texture.generateMipmaps = false;
+          texture.anisotropy = 8;
           texture.needsUpdate = true;
           resolve(texture);
         }

@@ -38,8 +38,7 @@ export const propertyConfig: PropertyConfig = {
       name: 'Living Room',
       panorama: {
         preview: '/assets/panoramas/living-room-preview.webp',
-        standard: '/assets/panoramas/living-room.webp',
-        fallback: '/assets/panoramas/living-room.jpg'
+        standard: '/assets/panoramas/living-room.jpg'
       },
       initialCamera: {
         yaw: 0,
@@ -93,8 +92,7 @@ export const propertyConfig: PropertyConfig = {
       name: 'Dining Room',
       panorama: {
         preview: '/assets/panoramas/dining-room-preview.webp',
-        standard: '/assets/panoramas/dining-room.webp',
-        fallback: '/assets/panoramas/dining-room.jpg'
+        standard: '/assets/panoramas/dining-room.jpg'
       },
       initialCamera: {
         yaw: 70,
@@ -140,8 +138,7 @@ export const propertyConfig: PropertyConfig = {
       name: 'Master Bedroom',
       panorama: {
         preview: '/assets/panoramas/bedroom-1-preview.webp',
-        standard: '/assets/panoramas/bedroom-1.webp',
-        fallback: '/assets/panoramas/bedroom-1.jpg'
+        standard: '/assets/panoramas/bedroom-1.jpg'
       },
       initialCamera: {
         yaw: 75,
@@ -187,8 +184,7 @@ export const propertyConfig: PropertyConfig = {
       name: 'Guest Bedroom',
       panorama: {
         preview: '/assets/panoramas/bedroom-2-preview.webp',
-        standard: '/assets/panoramas/bedroom-2.webp',
-        fallback: '/assets/panoramas/bedroom-2.jpg'
+        standard: '/assets/panoramas/bedroom-2.jpg'
       },
       initialCamera: {
         yaw: 90,
@@ -226,8 +222,7 @@ export const propertyConfig: PropertyConfig = {
       name: 'Kitchen',
       panorama: {
         preview: '/assets/panoramas/kitchen-preview.webp',
-        standard: '/assets/panoramas/kitchen.webp',
-        fallback: '/assets/panoramas/kitchen.jpg'
+        standard: '/assets/panoramas/kitchen.jpg'
       },
       initialCamera: {
         yaw: 0,
@@ -265,8 +260,7 @@ export const propertyConfig: PropertyConfig = {
       name: 'Bathroom',
       panorama: {
         preview: '/assets/panoramas/bathroom-preview.webp',
-        standard: '/assets/panoramas/bathroom.webp',
-        fallback: '/assets/panoramas/bathroom.jpg'
+        standard: '/assets/panoramas/bathroom.jpg'
       },
       initialCamera: {
         yaw: 0,

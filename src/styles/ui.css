@@ -145,8 +145,8 @@
   align-items: center;
   gap: 8px;
   pointer-events: none;
-  width: calc(100% - 24px);
-  max-width: 520px;
+  width: auto;
+  max-width: calc(100vw - 20px);
   box-sizing: border-box;
   transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
               opacity 0.5s ease;
@@ -161,9 +161,10 @@
 .iphone-slider-track {
   pointer-events: auto;
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   box-sizing: border-box;
   padding: 4px 6px;
   border-radius: 40px;
@@ -172,7 +173,7 @@
   -webkit-backdrop-filter: blur(28px) saturate(140%);
   border: 1px solid var(--glass-border) !important;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
-  touch-action: none;
+  touch-action: pan-y;
   user-select: none;
   cursor: grab;
   overflow: hidden;
@@ -191,9 +192,8 @@
   z-index: 3;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: clamp(2px, 0.8vw, 6px);
+  width: auto;
+  gap: clamp(3px, 0.8vw, 8px);
 }
 
 .iphone-slider-item {
@@ -206,15 +206,17 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 5px clamp(2px, 0.9vw, 8px);
-  border-radius: 30px;
-  flex: 1 1 0;
+  padding: 5px clamp(6px, 1.1vw, 12px);
+  border-radius: 28px;
+  flex: 0 0 auto;
+  width: auto;
   min-width: 0;
   box-sizing: border-box;
   cursor: pointer;
   color: rgba(245, 245, 247, 0.65);
-  transition: color 0.25s ease, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: color 0.25s ease, text-shadow 0.25s ease;
   -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
 }
 
 .iphone-slider-item:hover {
@@ -232,12 +234,12 @@
 }
 
 .iphone-slider-label {
-  font-size: clamp(0.56rem, 1.6vw, 0.65rem);
-  font-weight: 500;
-  letter-spacing: clamp(0.2px, 0.2vw, 0.8px);
+  font-size: clamp(0.54rem, 1.5vw, 0.65rem);
+  font-weight: 550;
+  letter-spacing: clamp(0.2px, 0.2vw, 0.7px);
   text-transform: uppercase;
   white-space: nowrap;
-  transition: color 0.25s ease, font-weight 0.25s ease;
+  transition: color 0.25s ease;
 }
 
 .iphone-slider-item.candidate {
@@ -250,6 +252,7 @@
 
 .iphone-slider-item.active {
   color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
 }
 
 .iphone-slider-item.active .iphone-slider-icon {
@@ -260,7 +263,6 @@
 
 .iphone-slider-item.active .iphone-slider-label {
   color: #ffffff;
-  font-weight: 600;
 }
 
 .iphone-slider-divider {
@@ -268,7 +270,7 @@
 }
 
 .iphone-location-btn {
-  padding: 5px clamp(2px, 0.9vw, 8px);
+  padding: 5px clamp(6px, 1.1vw, 12px);
 }
 
 .iphone-location-btn:hover .iphone-slider-icon {
@@ -284,7 +286,7 @@
   left: 0;
   z-index: 2;
   pointer-events: none;
-  border-radius: 28px;
+  border-radius: 26px;
   background: rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(16px) saturate(130%);
   -webkit-backdrop-filter: blur(16px) saturate(130%);
@@ -300,8 +302,8 @@
 }
 
 .iphone-slider-thumb.dragging {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.32);
 }
 
@@ -1101,32 +1103,31 @@
 
   .iphone-slider-track {
     padding: 3px 4px;
-    max-width: min(520px, calc(100vw - 16px));
+    max-width: calc(100vw - 16px);
   }
 
   .iphone-slider-items {
-    gap: 2px;
+    gap: clamp(2px, 0.6vw, 4px);
   }
 
   .iphone-slider-item {
-    padding: 4px 2px;
-    min-width: 0;
+    padding: 4px clamp(4px, 0.8vw, 7px);
     gap: 2px;
   }
 
   .iphone-slider-icon {
-    width: 18px;
-    height: 18px;
+    width: 17px;
+    height: 17px;
   }
 
   .iphone-slider-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
   }
 
   .iphone-slider-label {
     font-size: 0.52rem;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.1px;
   }
 
   .credits-text {

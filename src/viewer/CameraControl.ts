@@ -26,6 +26,10 @@ export class CameraControl {
   private targetFov = 75;
   private currentFov = 75;
 
+  // Centralized Configurable Zoom Limits (Section 8)
+  public static readonly DEFAULT_MIN_FOV = 52; // Max zoom-in boundary (prevents image pixelation)
+  public static readonly DEFAULT_MAX_FOV = 88; // Max zoom-out boundary (prevents fish-eye)
+
   // Damping & options
   private dampingFactor = 0.08;
   private autoRotateSpeed = -0.015; // subtle slow rotation
@@ -36,8 +40,8 @@ export class CameraControl {
   // Limits
   private minPitch = -85;
   private maxPitch = 85;
-  private minFov = 50;
-  private maxFov = 95;
+  private minFov = CameraControl.DEFAULT_MIN_FOV;
+  private maxFov = CameraControl.DEFAULT_MAX_FOV;
 
   // Drag interaction state
   private isDragging = false;
