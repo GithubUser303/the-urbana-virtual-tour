@@ -160,24 +160,17 @@
   position: relative;
   display: flex;
   align-items: center;
-  padding: 5px 7px;
+  padding: 5px 8px;
   border-radius: 40px;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(22, 28, 38, 0.24) 40%,
-    rgba(12, 16, 24, 0.32) 100%
-  );
-  backdrop-filter: blur(28px) saturate(180%) brightness(1.08);
-  -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.08);
-  border: none !important;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4),
-              0 2px 10px rgba(0, 0, 0, 0.25),
-              inset 0 1px 1px rgba(255, 255, 255, 0.2),
-              inset 0 0 16px rgba(255, 255, 255, 0.04);
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
   touch-action: none;
   user-select: none;
   cursor: grab;
+  overflow: hidden;
 }
 
 .iphone-slider-track::after {
@@ -193,7 +186,7 @@
   z-index: 3;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .iphone-slider-item {
@@ -262,10 +255,7 @@
 }
 
 .iphone-slider-divider {
-  width: 1px;
-  height: 22px;
-  background-color: rgba(255, 255, 255, 0.2);
-  margin: 0 4px;
+  display: none !important;
 }
 
 .iphone-location-btn {
@@ -277,7 +267,7 @@
   transform: scale(1.08);
 }
 
-/* Borderless Highly Refractive Glass Lens Thumb */
+/* Seamless Pure Glass Thumb */
 .iphone-slider-thumb {
   position: absolute;
   top: 4px;
@@ -286,46 +276,24 @@
   z-index: 2;
   pointer-events: none;
   border-radius: 32px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.34) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.18) 100%
-  );
-  backdrop-filter: blur(20px) saturate(190%) brightness(1.22);
-  -webkit-backdrop-filter: blur(20px) saturate(190%) brightness(1.22);
-  border: none !important;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35),
-              inset 0 1.5px 1.5px rgba(255, 255, 255, 0.6),
-              inset 0 -1px 1px rgba(255, 255, 255, 0.2),
-              inset 0 0 10px rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   transform: translateX(-50%);
   will-change: transform, width;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Crisp Top Specular Rim Reflection */
 .iphone-lens-specular {
-  position: absolute;
-  top: 1px;
-  left: 12%;
-  right: 12%;
-  height: 1.5px;
-  border-radius: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95) 50%, transparent);
+  display: none !important;
 }
 
 .iphone-slider-thumb.dragging {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.42) 0%,
-    rgba(255, 255, 255, 0.14) 50%,
-    rgba(255, 255, 255, 0.24) 100%
-  );
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45),
-              inset 0 2px 3px rgba(255, 255, 255, 0.8),
-              inset 0 -1.5px 2px rgba(255, 255, 255, 0.3),
-              inset 0 0 14px rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.32);
 }
 
 .credits-text {

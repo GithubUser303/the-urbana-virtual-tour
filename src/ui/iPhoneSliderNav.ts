@@ -125,10 +125,9 @@ export class iPhoneSliderNav {
     this.track.className = 'iphone-slider-track glass-panel';
     this.track.setAttribute('aria-label', 'Page navigation slider');
 
-    // Draggable Glass Lens Thumb (Minimalist, Transparent)
+    // Draggable Glass Lens Thumb (Clean, seamless highlight)
     this.thumb = document.createElement('div');
     this.thumb.className = 'iphone-slider-thumb';
-    this.thumb.innerHTML = `<div class="iphone-lens-specular"></div>`;
 
     this.itemsContainer = document.createElement('div');
     this.itemsContainer.className = 'iphone-slider-items';
@@ -155,11 +154,6 @@ export class iPhoneSliderNav {
       this.itemsContainer.appendChild(btn);
       this.itemElements.push(btn);
     });
-
-    // Separator before location
-    const divider = document.createElement('div');
-    divider.className = 'iphone-slider-divider';
-    this.itemsContainer.appendChild(divider);
 
     // Location button matching reference design
     const locationBtn = document.createElement('button');
