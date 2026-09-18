@@ -8,6 +8,8 @@ export class Lightbox {
   private counterElement!: HTMLElement;
   private captionElement!: HTMLElement;
   private titleElement!: HTMLElement;
+  private prevBtn!: HTMLButtonElement;
+  private nextBtn!: HTMLButtonElement;
   private currentItem: GalleryItem | null = null;
   private currentIndex = 0;
   private isOpen = false;
@@ -80,35 +82,35 @@ export class Lightbox {
     this.imgElement.alt = 'High-resolution property view';
 
     // Prev / Next arrow buttons
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'lightbox-arrow-btn prev glass-panel glass-interactive';
-    prevBtn.setAttribute('aria-label', 'Previous photo');
-    prevBtn.innerHTML = `
+    this.prevBtn = document.createElement('button');
+    this.prevBtn.className = 'lightbox-arrow-btn prev glass-panel glass-interactive';
+    this.prevBtn.setAttribute('aria-label', 'Previous photo');
+    this.prevBtn.innerHTML = `
       <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none">
         <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
     `;
-    prevBtn.addEventListener('click', (e) => {
+    this.prevBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.prev();
     });
 
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'lightbox-arrow-btn next glass-panel glass-interactive';
-    nextBtn.setAttribute('aria-label', 'Next photo');
-    nextBtn.innerHTML = `
+    this.nextBtn = document.createElement('button');
+    this.nextBtn.className = 'lightbox-arrow-btn next glass-panel glass-interactive';
+    this.nextBtn.setAttribute('aria-label', 'Next photo');
+    this.nextBtn.innerHTML = `
       <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none">
         <polyline points="9 18 15 12 9 6"></polyline>
       </svg>
     `;
-    nextBtn.addEventListener('click', (e) => {
+    this.nextBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.next();
     });
 
-    stage.appendChild(prevBtn);
+    stage.appendChild(this.prevBtn);
     stage.appendChild(this.imgElement);
-    stage.appendChild(nextBtn);
+    stage.appendChild(this.nextBtn);
 
     // Caption footer
     this.captionElement = document.createElement('div');
@@ -191,6 +193,11 @@ export class Lightbox {
     this.titleElement.textContent = this.currentItem.title;
     this.counterElement.textContent = total > 1 ? `${this.currentIndex + 1} / ${total}` : '';
     this.captionElement.textContent = photo.caption || this.currentItem.title;
+
+    if (this.prevBtn && this.nextBtn) {
+      this.prevBtn.style.display = total > 1 ? 'flex' : 'none';
+      this.nextBtn.style.display = total > 1 ? 'flex' : 'none';
+    }
 
     // Smooth image crossfade
     this.imgElement.style.opacity = '0';

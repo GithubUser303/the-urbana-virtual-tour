@@ -303,6 +303,11 @@ export const propertyConfig: PropertyConfig = {
           url: '/assets/gallery/living-room.webp',
           thumbnailUrl: '/assets/gallery/living-room-thumb.webp',
           caption: 'Spacious light-flooded architectural living area'
+        },
+        {
+          url: '/assets/gallery/living-room-2.webp',
+          thumbnailUrl: '/assets/gallery/living-room-2-thumb.webp',
+          caption: 'Contemporary lounge setting featuring sculpted ambient niches'
         }
       ],
       scatterPreset: {
@@ -347,6 +352,11 @@ export const propertyConfig: PropertyConfig = {
           url: '/assets/gallery/bedroom-2.webp',
           thumbnailUrl: '/assets/gallery/bedroom-2-thumb.webp',
           caption: 'Refined guest bedroom suite featuring panoramic city views'
+        },
+        {
+          url: '/assets/gallery/bedroom-2-2.webp',
+          thumbnailUrl: '/assets/gallery/bedroom-2-2-thumb.webp',
+          caption: 'Illuminated fluted glass wardrobe and private sanctuary'
         }
       ],
       scatterPreset: {
@@ -369,6 +379,11 @@ export const propertyConfig: PropertyConfig = {
           url: '/assets/gallery/dining-room.webp',
           thumbnailUrl: '/assets/gallery/dining-room-thumb.webp',
           caption: 'Refined dining arrangement with sculptural lighting'
+        },
+        {
+          url: '/assets/gallery/dining-room-2.webp',
+          thumbnailUrl: '/assets/gallery/dining-room-2-thumb.webp',
+          caption: 'Intimate dining setting framed by architectural backlit alcoves'
         }
       ],
       scatterPreset: {
@@ -391,6 +406,11 @@ export const propertyConfig: PropertyConfig = {
           url: '/assets/gallery/kitchen.webp',
           thumbnailUrl: '/assets/gallery/kitchen-thumb.webp',
           caption: 'High-precision culinary space with custom cabinetry'
+        },
+        {
+          url: '/assets/gallery/kitchen-2.webp',
+          thumbnailUrl: '/assets/gallery/kitchen-2-thumb.webp',
+          caption: 'Professional cooktop counter and extraction suite'
         }
       ],
       scatterPreset: {
