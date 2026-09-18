@@ -115,11 +115,17 @@ export class ControlMenu {
       </span>
       <span class="control-item-label">Go Fullscreen</span>
     `;
-    this.fullscreenBtn.addEventListener('click', (e) => {
+    const onFullscreen = (e: Event) => {
       e.stopPropagation();
+      e.preventDefault();
+      const now = performance.now();
+      if (now - this.lastActionTime < 300) return;
+      this.lastActionTime = now;
       this.toggleFullscreen();
       this.close();
-    });
+    };
+    this.fullscreenBtn.addEventListener('pointerup', onFullscreen);
+    this.fullscreenBtn.addEventListener('click', onFullscreen);
 
     // 2. Hide UI Button
     this.hideUiBtn = document.createElement('button');
@@ -132,28 +138,37 @@ export class ControlMenu {
       </span>
       <span class="control-item-label">Hide UI</span>
     `;
-    this.hideUiBtn.addEventListener('click', (e) => {
+    const onHideUi = (e: Event) => {
       e.stopPropagation();
+      e.preventDefault();
+      const now = performance.now();
+      if (now - this.lastActionTime < 300) return;
+      this.lastActionTime = now;
       this.tourState.toggleUiVisibility();
       this.close();
-    });
+    };
+    this.hideUiBtn.addEventListener('pointerup', onHideUi);
+    this.hideUiBtn.addEventListener('click', onHideUi);
 
     // 3. Audio Toggle Button
     this.musicBtn = document.createElement('button');
     this.musicBtn.className = 'control-item-btn glass-interactive';
-    this.updateMusicButton(this.tourState.getState().isAudioMuted);
+    this.updateMusicButton(AudioManager.getInstance().isMuted());
 
-    const onAudioToggle = async (e: Event) => {
+    const onAudioToggle = (e: Event) => {
       e.stopPropagation();
-      const now = Date.now();
-      if (now - this.lastActionTime < 350) return;
+      e.preventDefault();
+      const now = performance.now();
+      if (now - this.lastActionTime < 300) return;
       this.lastActionTime = now;
 
-      // Invoke centralized audio controller directly within user-gesture stack
-      await AudioManager.getInstance().toggle();
+      // Invoke centralized audio controller synchronously within user-gesture stack
+      const isMuted = AudioManager.getInstance().toggleMute();
+      this.updateMusicButton(isMuted);
       this.close();
     };
 
+    this.musicBtn.addEventListener('pointerup', onAudioToggle);
     this.musicBtn.addEventListener('click', onAudioToggle);
 
     this.menuDropdown.appendChild(this.fullscreenBtn);
@@ -162,12 +177,14 @@ export class ControlMenu {
 
     const onTrigger = (e: Event) => {
       e.stopPropagation();
-      const now = Date.now();
+      e.preventDefault();
+      const now = performance.now();
       if (now - this.lastActionTime < 300) return;
       this.lastActionTime = now;
       this.toggle();
     };
 
+    triggerBtn.addEventListener('pointerup', onTrigger);
     triggerBtn.addEventListener('click', onTrigger);
 
     // Close when clicking outside

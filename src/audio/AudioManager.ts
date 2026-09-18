@@ -2,107 +2,110 @@ import { TourState } from '../state/TourState';
 
 /**
  * Centralized background audio controller.
- * Handles mobile WebKit / Android touch autoplay policies,
- * playsinline compliance, volume support detection, and synchronized state tracking.
+ * Manages a single persistent HTMLAudioElement for the entire virtual tour lifetime.
+ * Guarantees cross-platform compliance (iOS Safari, Android Chrome, Desktop)
+ * with direct synchronous audio.muted = true / false control and user-gesture playback.
  */
 export class AudioManager {
   private static instance: AudioManager;
   private audio: HTMLAudioElement;
   private tourState: TourState;
-  private isInitialized = false;
-  private isFading = false;
-  private targetVolume = 0.4;
-  private fadeInterval: number | null = null;
-  private supportsVolumeControl = true;
-  private userExplicitlyMuted = false;
+  private defaultVolume = 0.25;
+  private previousVolume = 0.25;
+  private hasUnlocked = false;
+  private wasPlayingBeforeHidden = false;
 
   private constructor() {
     this.tourState = TourState.get();
     const config = this.tourState.getConfig();
 
-    // 1. Create and configure HTMLAudioElement
-    this.audio = new Audio();
+    this.defaultVolume = config.audio.defaultVolume ?? 0.25;
+    this.previousVolume = this.defaultVolume;
+
+    // 1. Create a single persistent audio element and attach to DOM
+    this.audio = document.createElement('audio');
     this.audio.id = 'tour-background-audio';
     this.audio.src = config.audio.src;
     this.audio.loop = true;
     this.audio.preload = 'auto';
     this.audio.setAttribute('playsinline', 'true');
     this.audio.setAttribute('webkit-playsinline', 'true');
-    this.targetVolume = config.audio.defaultVolume ?? 0.4;
+    this.audio.style.display = 'none';
 
-    // Detect if browser allows programmatic volume changes (iOS Safari volume is read-only)
     try {
-      this.audio.volume = this.targetVolume;
-      this.supportsVolumeControl = Math.abs(this.audio.volume - this.targetVolume) < 0.05;
+      this.audio.volume = this.defaultVolume;
     } catch {
-      this.supportsVolumeControl = false;
+      // Some mobile platforms (iOS) treat volume as read-only
     }
+    this.audio.muted = false;
 
-    // 2. Track native audio events to guarantee UI matches real playback state
-    this.audio.addEventListener('playing', () => {
-      this.userExplicitlyMuted = false;
-      this.tourState.setAudioMuted(false);
-    });
+    document.body.appendChild(this.audio);
 
-    this.audio.addEventListener('pause', () => {
-      if (this.userExplicitlyMuted) {
-        this.tourState.setAudioMuted(true);
-      }
-    });
-
-    this.audio.addEventListener('ended', () => {
-      this.tourState.setAudioMuted(true);
-    });
-
+    // 2. Synchronize reactive state on all native audio element events
+    const onStateChange = () => this.syncState();
+    this.audio.addEventListener('volumechange', onStateChange);
+    this.audio.addEventListener('play', onStateChange);
+    this.audio.addEventListener('playing', onStateChange);
+    this.audio.addEventListener('pause', onStateChange);
+    this.audio.addEventListener('ended', onStateChange);
     this.audio.addEventListener('error', (e) => {
-      console.warn('Audio playback encountered an error:', e);
-      this.clearFade();
-      this.tourState.setAudioMuted(true);
+      console.warn('Background audio error:', e);
+      this.syncState();
     });
 
-    // 3. Listen to TourState audioChange
+    // 3. Listen to external TourState changes (if called from outside)
     this.tourState.on('audioChange', (state) => {
-      if (state.isAudioMuted) {
-        this.userExplicitlyMuted = true;
-        this.fadeOutAndPause();
-      } else {
-        this.userExplicitlyMuted = false;
-        if (!this.isPlaying()) {
-          this.playWithFadeIn();
+      if (state.isAudioMuted !== this.isMuted()) {
+        if (state.isAudioMuted) {
+          this.mute();
+        } else {
+          this.unmute();
         }
       }
     });
 
-    // 4. Auto-unlock on first legitimate user interaction
-    const unlock = async () => {
-      if (!this.isInitialized) {
-        this.isInitialized = true;
-        if (!this.userExplicitlyMuted && !this.tourState.getState().isAudioMuted) {
-          await this.playWithFadeIn();
+    // 4. Initial attempt to play (desktop autoplay permitted)
+    this.audio.play().then(() => {
+      this.hasUnlocked = true;
+      this.syncState();
+    }).catch(() => {
+      // Autoplay blocked on mobile without user gesture; wait for first interaction
+      this.hasUnlocked = false;
+    });
+
+    // 5. Unlock / start on first legitimate user interaction
+    const unlockOnFirstTouch = () => {
+      if (!this.hasUnlocked) {
+        this.hasUnlocked = true;
+        if (!this.audio.muted) {
+          this.audio.play().catch((err) => {
+            console.log('Audio playback waiting for explicit tap:', err);
+          });
         }
       }
-      window.removeEventListener('click', unlock);
-      window.removeEventListener('pointerdown', unlock);
-      window.removeEventListener('touchstart', unlock);
-      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('pointerdown', unlockOnFirstTouch);
+      window.removeEventListener('touchstart', unlockOnFirstTouch);
+      window.removeEventListener('click', unlockOnFirstTouch);
+      window.removeEventListener('keydown', unlockOnFirstTouch);
     };
 
-    window.addEventListener('click', unlock, { passive: true });
-    window.addEventListener('pointerdown', unlock, { passive: true });
-    window.addEventListener('touchstart', unlock, { passive: true });
-    window.addEventListener('keydown', unlock, { passive: true });
+    window.addEventListener('pointerdown', unlockOnFirstTouch, { passive: true });
+    window.addEventListener('touchstart', unlockOnFirstTouch, { passive: true });
+    window.addEventListener('click', unlockOnFirstTouch, { passive: true });
+    window.addEventListener('keydown', unlockOnFirstTouch, { passive: true });
 
-    // 5. Visibility / tab switch management
+    // 6. Handle tab visibility / app backgrounding
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         if (!this.audio.paused) {
+          this.wasPlayingBeforeHidden = true;
           this.audio.pause();
         }
       } else {
-        // Resume when tab returns, if unmuted by user
-        if (this.isInitialized && !this.userExplicitlyMuted && !this.tourState.getState().isAudioMuted) {
-          this.playWithFadeIn();
+        if (this.wasPlayingBeforeHidden && !this.audio.muted) {
+          this.audio.play().catch(() => {});
         }
+        this.wasPlayingBeforeHidden = false;
       }
     });
 
@@ -113,6 +116,9 @@ export class AudioManager {
     window.addEventListener('beforeunload', () => {
       this.audio.pause();
     });
+
+    // Initial state sync
+    this.syncState();
   }
 
   public static init(): AudioManager {
@@ -126,97 +132,66 @@ export class AudioManager {
     return AudioManager.init();
   }
 
-  public isPlaying(): boolean {
-    return !this.audio.paused && !this.audio.ended && this.audio.readyState > 2;
+  public isMuted(): boolean {
+    return this.audio.muted || this.audio.volume === 0;
   }
 
-  public getIsFading(): boolean {
-    return this.isFading;
+  public isPlaying(): boolean {
+    return !this.audio.paused && !this.audio.ended;
+  }
+
+  public getAudioElement(): HTMLAudioElement {
+    return this.audio;
   }
 
   /**
-   * Directly toggle audio within a user gesture event stack.
-   * Guarantees iOS Safari / Android user-gesture approval.
+   * Synchronously toggles the mute state directly in the user gesture event stack.
+   * Returns true if newly muted, false if newly unmuted.
    */
-  public async toggle(): Promise<boolean> {
-    this.isInitialized = true;
-    if (this.isPlaying()) {
-      this.userExplicitlyMuted = true;
-      this.fadeOutAndPause();
-      this.tourState.setAudioMuted(true);
+  public toggleMute(): boolean {
+    if (this.isMuted()) {
+      this.unmute();
       return false;
     } else {
-      this.userExplicitlyMuted = false;
-      const success = await this.playWithFadeIn();
-      this.tourState.setAudioMuted(!success);
-      return success;
-    }
-  }
-
-  public async playWithFadeIn(): Promise<boolean> {
-    try {
-      this.clearFade();
-      
-      // On platforms supporting programmatic volume (Desktop / Chrome), fade in
-      if (this.supportsVolumeControl) {
-        this.audio.volume = 0;
-      } else {
-        this.audio.volume = 1;
-      }
-
-      await this.audio.play();
-
-      if (this.supportsVolumeControl) {
-        this.isFading = true;
-        const step = 0.04;
-        this.fadeInterval = window.setInterval(() => {
-          if (this.audio.volume < this.targetVolume - step) {
-            this.audio.volume += step;
-          } else {
-            this.audio.volume = this.targetVolume;
-            this.clearFade();
-          }
-        }, 50);
-      }
-
-      this.tourState.setAudioMuted(false);
+      this.mute();
       return true;
-    } catch (err) {
-      console.log('Background music playback blocked or failed:', err);
-      this.clearFade();
-      this.tourState.setAudioMuted(true);
-      return false;
     }
   }
 
-  public fadeOutAndPause(): void {
-    this.clearFade();
-
-    if (!this.supportsVolumeControl || this.audio.paused) {
-      this.audio.pause();
-      this.tourState.setAudioMuted(true);
-      return;
+  /**
+   * Immediately mutes audio playback.
+   */
+  public mute(): void {
+    if (this.audio.volume > 0) {
+      this.previousVolume = this.audio.volume;
     }
-
-    this.isFading = true;
-    const step = 0.05;
-    this.fadeInterval = window.setInterval(() => {
-      if (this.audio.volume > step) {
-        this.audio.volume -= step;
-      } else {
-        this.audio.volume = 0;
-        this.audio.pause();
-        this.clearFade();
-        this.tourState.setAudioMuted(true);
-      }
-    }, 50);
+    this.audio.muted = true;
+    this.syncState();
   }
 
-  private clearFade(): void {
-    if (this.fadeInterval !== null) {
-      clearInterval(this.fadeInterval);
-      this.fadeInterval = null;
+  /**
+   * Restores volume, unmutes, and resumes playback if paused.
+   */
+  public unmute(): void {
+    this.hasUnlocked = true;
+    this.audio.muted = false;
+    if (this.audio.volume === 0) {
+      this.audio.volume = this.previousVolume || this.defaultVolume;
     }
-    this.isFading = false;
+
+    // Call play directly inside user gesture stack
+    if (this.audio.paused) {
+      this.audio.play().catch((err) => {
+        console.warn('Audio play request blocked or failed:', err);
+        this.syncState();
+      });
+    }
+
+    this.syncState();
+  }
+
+  private syncState(): void {
+    const muted = this.isMuted();
+    this.tourState.setAudioMuted(muted);
   }
 }
