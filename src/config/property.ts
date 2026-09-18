@@ -324,17 +324,12 @@ export const propertyConfig: PropertyConfig = {
     {
       id: 'master',
       roomId: 'master',
-      title: 'Master Bedroom',
+      title: 'Guest Bedroom',
       photos: [
         {
           url: '/assets/gallery/bedroom-1.webp',
           thumbnailUrl: '/assets/gallery/bedroom-1-thumb.webp',
-          caption: 'Primary master bedroom sanctuary with minimalist aesthetics'
-        },
-        {
-          url: '/assets/gallery/bedroom-2.webp',
-          thumbnailUrl: '/assets/gallery/bedroom-2-thumb.webp',
-          caption: 'Refined master bedroom suite featuring ambient lighting and tailored finishes'
+          caption: 'Refined guest bedroom sanctuary with minimalist aesthetics'
         }
       ],
       scatterPreset: {
@@ -351,9 +346,19 @@ export const propertyConfig: PropertyConfig = {
     {
       id: 'guest',
       roomId: 'guest',
-      title: 'Guest Bedroom',
-      isPlaceholder: true,
-      photos: [],
+      title: 'Master Bedroom',
+      photos: [
+        {
+          url: '/assets/gallery/bedroom-2.webp',
+          thumbnailUrl: '/assets/gallery/bedroom-2-thumb.webp',
+          caption: 'Refined master bedroom suite featuring panoramic city views'
+        },
+        {
+          url: '/assets/gallery/bedroom-2-2.webp',
+          thumbnailUrl: '/assets/gallery/bedroom-2-2-thumb.webp',
+          caption: 'Illuminated fluted glass wardrobe and private sanctuary'
+        }
+      ],
       scatterPreset: {
         x: 28,
         y: 18,
