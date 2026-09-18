@@ -59,7 +59,8 @@ export class ScatteredGallery {
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
     `;
-    closeBtn.addEventListener('click', () => {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       this.tourState.closeModal();
     });
 
@@ -102,6 +103,74 @@ export class ScatteredGallery {
     card.style.setProperty('--wind-period', `${p.windPeriod}s`);
     card.style.setProperty('--wind-phase', `${p.windPhase}rad`);
     card.style.setProperty('--stagger-delay', `${index * 80}ms`);
+
+    // Dedicated mobile landscape presets: 2-row organic staggered layout
+    const mobilePresets: Record<string, { x: number; y: number; rotate: number; width: string; height: string; zIndex: number }> = {
+      living: {
+        x: -27,
+        y: -12,
+        rotate: -1.6,
+        width: 'clamp(115px, 15.5vw, 142px)',
+        height: 'clamp(80px, 21.5vh, 98px)',
+        zIndex: 4
+      },
+      master: {
+        x: 0,
+        y: -14,
+        rotate: 1.2,
+        width: 'clamp(120px, 16vw, 148px)',
+        height: 'clamp(82px, 22vh, 102px)',
+        zIndex: 5
+      },
+      guest: {
+        x: 27,
+        y: -11,
+        rotate: -1.4,
+        width: 'clamp(115px, 15.5vw, 142px)',
+        height: 'clamp(80px, 21.5vh, 98px)',
+        zIndex: 4
+      },
+      dining: {
+        x: -28,
+        y: 15,
+        rotate: 1.4,
+        width: 'clamp(112px, 15vw, 140px)',
+        height: 'clamp(78px, 21vh, 96px)',
+        zIndex: 3
+      },
+      kitchen: {
+        x: -1,
+        y: 17,
+        rotate: -1.2,
+        width: 'clamp(118px, 15.8vw, 145px)',
+        height: 'clamp(80px, 21.5vh, 98px)',
+        zIndex: 4
+      },
+      bathroom: {
+        x: 27,
+        y: 14,
+        rotate: 1.8,
+        width: 'clamp(110px, 14.5vw, 136px)',
+        height: 'clamp(76px, 20.5vh, 94px)',
+        zIndex: 2
+      }
+    };
+
+    const mp = mobilePresets[item.id] || {
+      x: p.x * 0.7,
+      y: p.y * 0.7,
+      rotate: p.rotate * 0.5,
+      width: '130px',
+      height: '90px',
+      zIndex: p.zIndex
+    };
+
+    card.style.setProperty('--m-scatter-x', `${mp.x}vw`);
+    card.style.setProperty('--m-scatter-y', `${mp.y}vh`);
+    card.style.setProperty('--m-rot', `${mp.rotate}deg`);
+    card.style.setProperty('--m-card-w', mp.width);
+    card.style.setProperty('--m-card-h', mp.height);
+    card.style.setProperty('--m-z-index', `${mp.zIndex}`);
 
     // Card visual content
     if (item.isPlaceholder || item.photos.length === 0) {

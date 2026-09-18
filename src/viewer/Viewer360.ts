@@ -85,6 +85,9 @@ export class Viewer360 {
     this.onWindowResize = this.onWindowResize.bind(this);
     window.addEventListener('resize', this.onWindowResize);
     window.addEventListener('orientationchange', this.onWindowResize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this.onWindowResize);
+    }
 
     // 7. Subscribe to room changes
     this.tourState.on('roomChange', () => {
@@ -262,6 +265,9 @@ export class Viewer360 {
     }
     window.removeEventListener('resize', this.onWindowResize);
     window.removeEventListener('orientationchange', this.onWindowResize);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this.onWindowResize);
+    }
 
     this.textureManager.clear();
     this.materialA.dispose();

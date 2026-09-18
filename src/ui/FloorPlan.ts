@@ -27,6 +27,12 @@ export class FloorPlan {
     });
 
     this.updateCurrentRoom(this.tourState.getState().currentRoomId);
+    this.updateResponsiveDimensions();
+    window.addEventListener('resize', () => this.updateResponsiveDimensions());
+    window.addEventListener('orientationchange', () => this.updateResponsiveDimensions());
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => this.updateResponsiveDimensions());
+    }
   }
 
   private createElement(): HTMLElement {
@@ -82,7 +88,7 @@ export class FloorPlan {
     // Interactive SVG overlay matching the blueprint layout (1312 x 1199 native)
     const svgOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svgOverlay.setAttribute('viewBox', '0 0 1312 1199');
-    svgOverlay.setAttribute('preserveAspectRatio', 'none');
+    svgOverlay.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     svgOverlay.setAttribute('class', 'floorplan-svg-overlay');
 
     // Define room polygon regions corresponding directly to the blueprint image
@@ -224,6 +230,27 @@ export class FloorPlan {
         dot.classList.remove('active');
       }
     });
+  }
+
+  private updateResponsiveDimensions(): void {
+    const isLandscapeMobile = window.matchMedia('(orientation: landscape) and (max-height: 550px), (max-height: 500px)').matches;
+    if (isLandscapeMobile) {
+      const availW = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+      const availH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+      // Choose whichever is the limiting dimension (Section 26)
+      const maxW = 165;
+      const widthRatioLimit = Math.floor(availW * 0.22);
+      const heightRatioLimit = Math.floor((availH - 85) * (1312 / 1199));
+      const compactW = Math.max(126, Math.min(maxW, widthRatioLimit, heightRatioLimit));
+      const compactBodyH = Math.floor((compactW - 12) * (1199 / 1312));
+
+      this.element.style.setProperty('--fp-compact-w', `${compactW}px`);
+      this.element.style.setProperty('--fp-compact-body-h', `${compactBodyH}px`);
+    } else {
+      this.element.style.removeProperty('--fp-compact-w');
+      this.element.style.removeProperty('--fp-compact-body-h');
+    }
   }
 }
 

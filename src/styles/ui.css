@@ -1365,37 +1365,153 @@ body.orientation-lock-active {
 
   /* Compact bottom-right corner floorplan on landscape mobile */
   .floorplan-panel {
-    bottom: calc(8px + var(--sab)) !important;
+    bottom: calc(6px + var(--sab)) !important;
     right: calc(10px + var(--sar)) !important;
-    width: clamp(135px, 18vw, 165px);
-    max-height: calc(100dvh - 56px - var(--sat) - var(--sab));
+    width: clamp(112px, 14vw, 130px);
+    max-height: calc(100dvh - 50px - var(--sat) - var(--sab));
+    border-radius: 14px;
   }
 
   .floorplan-header {
-    padding: 6px 10px;
+    padding: 4px 8px;
   }
 
   .floorplan-title {
-    font-size: 0.56rem;
-    letter-spacing: 1px;
+    font-size: 0.5rem;
+    letter-spacing: 0.8px;
   }
 
   .floorplan-current-room {
-    font-size: 0.72rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.3px;
   }
 
   .floorplan-panel.expanded {
-    width: min(220px, 32vw);
+    width: var(--fp-compact-w, clamp(126px, 19vw, 165px));
   }
 
   .floorplan-panel.expanded .floorplan-body {
-    max-height: calc(100dvh - 72px - var(--sat) - var(--sab));
+    max-height: var(--fp-compact-body-h, clamp(100px, 32vh, 145px));
+    opacity: 1;
   }
 
   .floorplan-blueprint-wrapper {
-    margin: 3px 6px 6px 6px;
+    margin: 2px 6px 6px 6px;
     width: calc(100% - 12px);
-    max-height: calc(100dvh - 100px - var(--sat) - var(--sab));
+    aspect-ratio: 1312 / 1199;
+    max-height: var(--fp-compact-body-h, clamp(100px, 32vh, 145px));
+    border-radius: 8px;
+  }
+
+  .floorplan-hotspot-dot {
+    width: 9px;
+    height: 9px;
+  }
+
+  /* Compact Scattered Gallery on landscape mobile */
+  .gallery-modal-header {
+    top: calc(8px + var(--sat));
+    width: min(88vw, 360px);
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 18px;
+    z-index: 220;
+  }
+
+  .gallery-modal-title {
+    font-size: 0.95rem;
+    letter-spacing: 1.2px;
+    line-height: 1;
+  }
+
+  .gallery-close-btn {
+    width: 32px;
+    height: 32px;
+    padding: 4px;
+  }
+
+  .gallery-close-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .gallery-scatter-stage {
+    perspective: 900px;
+    padding-top: calc(36px + var(--sat));
+    padding-bottom: var(--sab);
+  }
+
+  .scatter-card {
+    width: var(--m-card-w, 130px) !important;
+    height: var(--m-card-h, 90px) !important;
+    --scatter-x: var(--m-scatter-x, 0vw) !important;
+    --scatter-y: var(--m-scatter-y, 0vh) !important;
+    --base-rot: var(--m-rot, 0deg) !important;
+    z-index: var(--m-z-index, var(--z-index));
+    border-radius: 12px;
+    padding: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    animation: organicWindSwayMobile var(--wind-period) ease-in-out infinite;
+  }
+
+  .scatter-card-info {
+    padding: 3px 7px;
+    border-radius: 8px;
+    gap: 4px;
+  }
+
+  .scatter-card-title {
+    font-size: 0.65rem;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .scatter-card-badge {
+    font-size: 0.52rem;
+    padding: 1px 4px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  .scatter-card:hover,
+  .scatter-card:focus {
+    animation-play-state: paused;
+    transform: translate3d(var(--scatter-x), var(--scatter-y), 10px) rotate(0deg) scale(1.04) !important;
+    z-index: 50 !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Compact Control Menu on landscape mobile */
+  .control-menu-container {
+    top: calc(6px + var(--sat));
+    right: calc(10px + var(--sar));
+  }
+
+  .control-trigger-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .control-trigger-btn svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .control-dropdown {
+    top: 42px;
+    width: 190px;
+    padding: 6px;
+    border-radius: 14px;
+  }
+
+  .control-item-btn {
+    padding: 7px 10px;
+    font-size: 0.72rem;
+    gap: 8px;
+    display: flex;
+    align-items: center;
   }
 }
 

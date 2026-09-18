@@ -167,6 +167,7 @@ export class TourState {
   }
 
   public setAudioMuted(muted: boolean): void {
+    if (this.data.isAudioMuted === muted) return;
     this.data.isAudioMuted = muted;
     this.emit('audioChange');
   }
