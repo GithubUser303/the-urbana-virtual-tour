@@ -4,7 +4,8 @@ import { TourState } from '../state/TourState';
  * Centralized background audio controller.
  * Manages a single persistent HTMLAudioElement for the entire virtual tour lifetime.
  * Guarantees cross-platform compliance (iOS Safari, Android Chrome, Desktop)
- * with direct synchronous audio.muted = true / false control and user-gesture playback.
+ * with direct synchronous audio playback on the user's first legitimate interaction
+ * (tapping the intro screen), and direct synchronous audio.muted / play() control.
  */
 export class AudioManager {
   private static instance: AudioManager;
@@ -12,7 +13,7 @@ export class AudioManager {
   private tourState: TourState;
   private defaultVolume = 0.25;
   private previousVolume = 0.25;
-  private hasUnlocked = false;
+  private hasStarted = false;
   private wasPlayingBeforeHidden = false;
 
   private constructor() {
@@ -28,6 +29,11 @@ export class AudioManager {
     this.audio.src = config.audio.src;
     this.audio.loop = true;
     this.audio.preload = 'auto';
+
+    // Inline playback attributes for iOS Safari WebKit
+    try {
+      (this.audio as any).playsInline = true;
+    } catch (_) {}
     this.audio.setAttribute('playsinline', 'true');
     this.audio.setAttribute('webkit-playsinline', 'true');
     this.audio.style.display = 'none';
@@ -35,7 +41,7 @@ export class AudioManager {
     try {
       this.audio.volume = this.defaultVolume;
     } catch {
-      // Some mobile platforms (iOS) treat volume as read-only
+      // Some mobile platforms (iOS) treat volume as hardware-controlled
     }
     this.audio.muted = false;
 
@@ -53,7 +59,7 @@ export class AudioManager {
       this.syncState();
     });
 
-    // 3. Listen to external TourState changes (if called from outside)
+    // 3. Listen to external TourState changes
     this.tourState.on('audioChange', (state) => {
       if (state.isAudioMuted !== this.isMuted()) {
         if (state.isAudioMuted) {
@@ -64,37 +70,23 @@ export class AudioManager {
       }
     });
 
-    // 4. Initial attempt to play (desktop autoplay permitted)
-    this.audio.play().then(() => {
-      this.hasUnlocked = true;
-      this.syncState();
-    }).catch(() => {
-      // Autoplay blocked on mobile without user gesture; wait for first interaction
-      this.hasUnlocked = false;
-    });
-
-    // 5. Unlock / start on first legitimate user interaction
-    const unlockOnFirstTouch = () => {
-      if (!this.hasUnlocked) {
-        this.hasUnlocked = true;
-        if (!this.audio.muted) {
-          this.audio.play().catch((err) => {
-            console.log('Audio playback waiting for explicit tap:', err);
-          });
-        }
+    // 4. Fallback touch unlock: in case user interacted outside IntroScreen
+    const unlockFallback = () => {
+      if (!this.hasStarted) {
+        this.startOnUserGesture();
       }
-      window.removeEventListener('pointerdown', unlockOnFirstTouch);
-      window.removeEventListener('touchstart', unlockOnFirstTouch);
-      window.removeEventListener('click', unlockOnFirstTouch);
-      window.removeEventListener('keydown', unlockOnFirstTouch);
+      window.removeEventListener('pointerdown', unlockFallback);
+      window.removeEventListener('touchstart', unlockFallback);
+      window.removeEventListener('click', unlockFallback);
+      window.removeEventListener('keydown', unlockFallback);
     };
 
-    window.addEventListener('pointerdown', unlockOnFirstTouch, { passive: true });
-    window.addEventListener('touchstart', unlockOnFirstTouch, { passive: true });
-    window.addEventListener('click', unlockOnFirstTouch, { passive: true });
-    window.addEventListener('keydown', unlockOnFirstTouch, { passive: true });
+    window.addEventListener('pointerdown', unlockFallback, { passive: true });
+    window.addEventListener('touchstart', unlockFallback, { passive: true });
+    window.addEventListener('click', unlockFallback, { passive: true });
+    window.addEventListener('keydown', unlockFallback, { passive: true });
 
-    // 6. Handle tab visibility / app backgrounding
+    // 5. Handle tab visibility / app backgrounding
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         if (!this.audio.paused) {
@@ -117,7 +109,7 @@ export class AudioManager {
       this.audio.pause();
     });
 
-    // Initial state sync
+    // Initial state sync (reflects actual audio state before user gesture)
     this.syncState();
   }
 
@@ -132,8 +124,40 @@ export class AudioManager {
     return AudioManager.init();
   }
 
+  /**
+   * Starts background audio directly inside the user's first legitimate gesture
+   * (e.g. clicking/tapping the intro screen to enter the experience).
+   *
+   * Executes synchronously inside the event callstack to satisfy strict mobile
+   * autoplay policies on iOS Safari and Android Chrome.
+   */
+  public startOnUserGesture(): void {
+    if (this.hasStarted) return;
+    this.hasStarted = true;
+
+    try {
+      this.audio.volume = this.defaultVolume;
+    } catch (_) {}
+    this.audio.muted = false;
+
+    // Call play() directly inside the user gesture
+    const playPromise = this.audio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          this.syncState();
+        })
+        .catch((err) => {
+          console.warn('Playback request blocked or deferred:', err);
+          this.syncState();
+        });
+    } else {
+      this.syncState();
+    }
+  }
+
   public isMuted(): boolean {
-    return this.audio.muted || this.audio.volume === 0;
+    return this.audio.muted || this.audio.paused || this.audio.volume === 0;
   }
 
   public isPlaying(): boolean {
@@ -166,25 +190,32 @@ export class AudioManager {
       this.previousVolume = this.audio.volume;
     }
     this.audio.muted = true;
+    this.audio.pause();
     this.syncState();
   }
 
   /**
-   * Restores volume, unmutes, and resumes playback if paused.
+   * Restores volume, unmutes, and resumes playback directly in user gesture stack.
    */
   public unmute(): void {
-    this.hasUnlocked = true;
+    this.hasStarted = true;
     this.audio.muted = false;
     if (this.audio.volume === 0) {
-      this.audio.volume = this.previousVolume || this.defaultVolume;
+      try {
+        this.audio.volume = this.previousVolume || this.defaultVolume;
+      } catch (_) {}
     }
 
-    // Call play directly inside user gesture stack
     if (this.audio.paused) {
-      this.audio.play().catch((err) => {
-        console.warn('Audio play request blocked or failed:', err);
-        this.syncState();
-      });
+      const playPromise = this.audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => this.syncState())
+          .catch((err) => {
+            console.warn('Audio play request blocked or failed:', err);
+            this.syncState();
+          });
+      }
     }
 
     this.syncState();
@@ -192,6 +223,8 @@ export class AudioManager {
 
   private syncState(): void {
     const muted = this.isMuted();
-    this.tourState.setAudioMuted(muted);
+    if (this.tourState.getState().isAudioMuted !== muted) {
+      this.tourState.setAudioMuted(muted);
+    }
   }
 }
