@@ -66,62 +66,34 @@
   animation: introTextIn 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.4s;
 }
 
-.intro-enter-btn {
-  margin-top: clamp(8px, 1.8vh, 16px);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: clamp(9px, 1.8vh, 13px) clamp(22px, 3.2vw, 32px);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-  font-size: clamp(0.74rem, 1.4vw, 0.88rem);
-  font-weight: 550;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  opacity: 0;
-  transform: translateY(14px);
-  animation: introTextIn 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.55s;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              background 0.3s ease,
-              border-color 0.3s ease,
-              box-shadow 0.3s ease;
-  pointer-events: auto;
-}
-
-.intro-screen:hover .intro-enter-btn,
-.intro-enter-btn:hover {
-  transform: translateY(0) scale(1.04);
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.38);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 24px rgba(255, 255, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-
-.intro-enter-icon {
-  width: 13px;
-  height: 13px;
-  fill: currentColor;
-  opacity: 0.9;
-  transition: transform 0.3s ease;
-}
-
-.intro-screen:hover .intro-enter-icon,
-.intro-enter-btn:hover .intro-enter-icon {
-  transform: translateX(2px);
-}
-
 .intro-hint {
-  font-size: clamp(0.66rem, 1.2vw, 0.76rem);
-  color: rgba(255, 255, 255, 0.45);
-  letter-spacing: 1.2px;
+  margin-top: clamp(20px, 4vh, 36px);
+  font-size: clamp(0.68rem, 1.2vw, 0.8rem);
+  font-weight: 400;
+  color: rgba(245, 245, 247, 0.55);
+  letter-spacing: clamp(2px, 0.35vw, 3.5px);
   text-transform: uppercase;
   opacity: 0;
-  animation: introTextIn 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.75s;
+  transform: translateY(12px);
+  animation: introHintIn 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.65s,
+             introHintPulse 3.5s ease-in-out infinite 2.2s;
+  pointer-events: none;
+}
+
+@keyframes introHintIn {
+  to {
+    opacity: 0.55;
+    transform: translateY(0);
+  }
+}
+
+@keyframes introHintPulse {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.25;
+  }
 }
 
 @keyframes introTextIn {

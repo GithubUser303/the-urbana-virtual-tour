@@ -2,9 +2,9 @@ import { TourState } from '../state/TourState';
 import { AudioManager } from '../audio/AudioManager';
 
 /**
- * Interactive Intro Screen & Experience Entry Gateway.
- * Acts as the compliant first user-interaction point to initiate audio playback
- * and unlock WebKit / Blink autoplay restrictions on mobile (iOS Safari & Android).
+ * Cinematic Title Card & Experience Entry Gateway.
+ * Clicking or tapping anywhere on the intro card directly initiates audio playback
+ * and unlocks mobile browser autoplay restrictions (iOS Safari & Android).
  */
 export class IntroScreen {
   private element: HTMLElement;
@@ -44,23 +44,12 @@ export class IntroScreen {
     subtitle.className = 'intro-sub';
     subtitle.textContent = this.tourState.getConfig().credits; // "Experience by Lost in Renders"
 
-    // Luxury glass interactive entry pill
-    const enterBtn = document.createElement('div');
-    enterBtn.className = 'intro-enter-btn glass-interactive';
-    enterBtn.innerHTML = `
-      <span class="intro-enter-text">Enter Experience</span>
-      <svg class="intro-enter-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none">
-        <polygon points="6 4 20 12 6 20 6 4"></polygon>
-      </svg>
-    `;
-
     const hint = document.createElement('div');
     hint.className = 'intro-hint';
-    hint.textContent = 'Tap anywhere to enter';
+    hint.textContent = 'TAP ANYWHERE TO ENTER';
 
     content.appendChild(title);
     content.appendChild(subtitle);
-    content.appendChild(enterBtn);
     content.appendChild(hint);
 
     screen.appendChild(backdrop);
@@ -79,7 +68,7 @@ export class IntroScreen {
       }
 
       // 1-5. DIRECT SYNCHRONOUS INVOCATION WITHIN USER GESTURE CALLSTACK
-      // Initialises volume, unmuted, calls audio.play() and catches the promise.
+      // Initializes volume, unmuted, calls audio.play() and catches the promise.
       try {
         AudioManager.getInstance().startOnUserGesture();
       } catch (err) {
@@ -90,7 +79,7 @@ export class IntroScreen {
       this.dismiss();
     };
 
-    // User taps anywhere on the intro screen or enter button
+    // User taps or clicks anywhere on the intro overlay
     this.element.addEventListener('pointerup', triggerEnter);
     this.element.addEventListener('touchend', triggerEnter, { passive: true });
     this.element.addEventListener('click', triggerEnter);
@@ -105,8 +94,8 @@ export class IntroScreen {
 
   /**
    * Called when first room panorama is rendered in background.
-   * We intentionally do NOT auto-dismiss here so the user's first tap
-   * serves as the legitimate user gesture required by mobile browsers for audio.
+   * We intentionally do NOT auto-dismiss here so the user's tap
+   * acts as the legitimate user gesture required by mobile browsers for audio.
    */
   public notifyFirstRoomReady(): void {
     // Non-blocking; tour is ready underneath whenever user taps
