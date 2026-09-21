@@ -2,19 +2,64 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import qrcode from 'qrcode';
 import { generateTOTPSecret, verifyTOTP, generateOtpAuthUri } from './totp.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Persistent secret file paths
+// Persistent secret & state file paths
 const SECRET_FILE = path.resolve(__dirname, '.totp_secret');
+const ENROLLED_FLAG_FILE = path.resolve(__dirname, '.totp_enrolled');
 const SESSION_KEY_FILE = path.resolve(__dirname, '.session_secret');
+const ADMIN_KEY_FILE = path.resolve(__dirname, '.admin_key');
+
+// In-memory pending secret during active enrollment flow
+let pendingSecret = null;
 
 /**
- * Retrieve or automatically generate the persistent TOTP secret.
+ * Retrieve or create persistent admin password/key.
  */
-export function getOrCreateTOTPSecret() {
+export function getOrCreateAdminKey() {
+  if (process.env.URBANA_ADMIN_KEY) {
+    return process.env.URBANA_ADMIN_KEY.trim();
+  }
+
+  if (fs.existsSync(ADMIN_KEY_FILE)) {
+    const saved = fs.readFileSync(ADMIN_KEY_FILE, 'utf-8').trim();
+    if (saved) return saved;
+  }
+
+  // Default initial admin key (can be customized via env or file)
+  const defaultKey = 'urbana_admin_pass';
+  fs.writeFileSync(ADMIN_KEY_FILE, defaultKey, { mode: 0o600 });
+  return defaultKey;
+}
+
+export function verifyAdminPassword(password) {
+  if (!password || typeof password !== 'string') return false;
+  const adminKey = getOrCreateAdminKey();
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(password.trim()),
+      Buffer.from(adminKey)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if TOTP setup has been completed and verified.
+ */
+export function isTOTPEnrolled() {
+  return fs.existsSync(SECRET_FILE) && fs.existsSync(ENROLLED_FLAG_FILE);
+}
+
+/**
+ * Retrieve current active TOTP secret (only if already enrolled).
+ */
+export function getActiveTOTPSecret() {
   if (process.env.URBANA_TOTP_SECRET) {
     return process.env.URBANA_TOTP_SECRET.trim().toUpperCase();
   }
@@ -24,10 +69,73 @@ export function getOrCreateTOTPSecret() {
     if (saved) return saved.toUpperCase();
   }
 
-  // Generate standard 160-bit Base32 secret and save
-  const newSecret = generateTOTPSecret();
-  fs.writeFileSync(SECRET_FILE, newSecret, { mode: 0o600 });
-  return newSecret;
+  return null;
+}
+
+/**
+ * Start or retrieve pending enrollment details for the administrator.
+ */
+export async function getEnrollmentSetup(forceReset = false) {
+  if (forceReset || !pendingSecret) {
+    pendingSecret = generateTOTPSecret();
+  }
+
+  const uri = generateOtpAuthUri('Resident', 'The Urbana', pendingSecret);
+  const qrCodeDataUrl = await qrcode.toDataURL(uri, {
+    errorCorrectionLevel: 'M',
+    width: 280,
+    margin: 2,
+    color: {
+      dark: '#0e141e',
+      light: '#ffffff'
+    }
+  });
+
+  return {
+    secret: pendingSecret,
+    uri,
+    qrCodeDataUrl,
+    isAlreadyActive: isTOTPEnrolled()
+  };
+}
+
+/**
+ * Confirm administrator enrollment with a valid 6-digit TOTP code.
+ */
+export function confirmEnrollment(code) {
+  if (!pendingSecret) {
+    return {
+      success: false,
+      error: 'No enrollment session is currently pending. Please start setup again.'
+    };
+  }
+
+  const isValid = verifyTOTP(code, pendingSecret, 1);
+  if (!isValid) {
+    return {
+      success: false,
+      error: 'Verification code incorrect. Please verify the 6-digit code from your authenticator app.'
+    };
+  }
+
+  // Commit secret to persistent file
+  fs.writeFileSync(SECRET_FILE, pendingSecret, { mode: 0o600 });
+  fs.writeFileSync(ENROLLED_FLAG_FILE, new Date().toISOString(), { mode: 0o600 });
+  pendingSecret = null;
+
+  return { success: true };
+}
+
+/**
+ * Reset enrollment (removes active flag and prepares fresh secret).
+ */
+export async function resetEnrollment() {
+  if (fs.existsSync(ENROLLED_FLAG_FILE)) {
+    try {
+      fs.unlinkSync(ENROLLED_FLAG_FILE);
+    } catch (_) {}
+  }
+  return await getEnrollmentSetup(true);
 }
 
 /**
@@ -50,6 +158,7 @@ function getSessionSigningKey() {
 
 const SESSION_SIGNING_KEY = getSessionSigningKey();
 export const SESSION_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+export const ADMIN_SESSION_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 // Rate-limiting map: ip -> { failedCount, lockUntil, windowStart }
 const rateLimitMap = new Map();
@@ -59,7 +168,6 @@ export function checkRateLimit(ip) {
   const record = rateLimitMap.get(ip);
   if (!record) return { allowed: true };
 
-  // If locked out
   if (record.lockUntil && now < record.lockUntil) {
     const remainingSec = Math.ceil((record.lockUntil - now) / 1000);
     return {
@@ -68,7 +176,6 @@ export function checkRateLimit(ip) {
     };
   }
 
-  // Reset window if 5 minutes elapsed
   if (now - record.windowStart > 5 * 60 * 1000) {
     rateLimitMap.delete(ip);
     return { allowed: true };
@@ -87,7 +194,6 @@ export function recordFailedAttempt(ip) {
     record.failedCount += 1;
   }
 
-  // If failed 5 times, lock out for 60 seconds (or more for subsequent failures)
   if (record.failedCount >= 5) {
     const lockDuration = Math.min(300, 30 * Math.pow(2, record.failedCount - 5)) * 1000;
     record.lockUntil = now + lockDuration;
@@ -101,7 +207,7 @@ export function recordSuccessfulAttempt(ip) {
 }
 
 /**
- * Issue an HMAC-signed session cookie token.
+ * Issue signed visitor session cookie token.
  */
 export function createSessionToken() {
   const payload = {
@@ -119,16 +225,34 @@ export function createSessionToken() {
 }
 
 /**
- * Verify a session cookie token.
+ * Issue signed admin session cookie token.
  */
-export function verifySessionToken(token) {
+export function createAdminToken() {
+  const payload = {
+    role: 'admin',
+    exp: Date.now() + ADMIN_SESSION_DURATION_MS,
+    nonce: crypto.randomBytes(16).toString('hex')
+  };
+
+  const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', SESSION_SIGNING_KEY)
+    .update(payloadStr)
+    .digest('base64url');
+
+  return `${payloadStr}.${signature}`;
+}
+
+/**
+ * Verify a signed token (visitor or admin).
+ */
+export function verifySessionToken(token, requiredRole = null) {
   if (!token || typeof token !== 'string') return false;
   const parts = token.split('.');
   if (parts.length !== 2) return false;
 
   const [payloadStr, signature] = parts;
 
-  // Verify HMAC signature in constant time
   const expectedSig = crypto
     .createHmac('sha256', SESSION_SIGNING_KEY)
     .update(payloadStr)
@@ -142,11 +266,11 @@ export function verifySessionToken(token) {
     return false;
   }
 
-  // Verify expiration
   try {
     const payload = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf-8'));
     if (!payload.exp || typeof payload.exp !== 'number') return false;
     if (Date.now() > payload.exp) return false;
+    if (requiredRole && payload.role !== requiredRole) return false;
     return true;
   } catch {
     return false;
@@ -172,7 +296,7 @@ export function parseCookies(cookieHeader) {
 }
 
 /**
- * Verify incoming client code against server TOTP secret.
+ * Verify incoming client code against active server TOTP secret.
  */
 export function handleVerifyCode(code, clientIp) {
   const rateLimit = checkRateLimit(clientIp);
@@ -180,7 +304,14 @@ export function handleVerifyCode(code, clientIp) {
     return { success: false, error: rateLimit.message };
   }
 
-  const secret = getOrCreateTOTPSecret();
+  const secret = getActiveTOTPSecret();
+  if (!secret) {
+    return {
+      success: false,
+      error: 'Virtual tour authentication is not yet configured. Please contact the administrator.'
+    };
+  }
+
   const isValid = verifyTOTP(code, secret, 1);
 
   if (!isValid) {
@@ -197,7 +328,7 @@ export function handleVerifyCode(code, clientIp) {
 }
 
 /**
- * Check if request has an active valid session.
+ * Check if request has an active valid visitor session.
  */
 export function isAuthenticatedRequest(cookieHeader) {
   const cookies = parseCookies(cookieHeader);
@@ -206,10 +337,10 @@ export function isAuthenticatedRequest(cookieHeader) {
 }
 
 /**
- * Return TOTP enrollment details for administrator setup.
+ * Check if request has an active valid admin session.
  */
-export function getEnrollmentInfo() {
-  const secret = getOrCreateTOTPSecret();
-  const uri = generateOtpAuthUri('Resident', 'The Urbana', secret);
-  return { secret, uri };
+export function isAdminRequest(cookieHeader) {
+  const cookies = parseCookies(cookieHeader);
+  const token = cookies['urbana_admin_session'];
+  return verifySessionToken(token, 'admin');
 }

@@ -5,12 +5,22 @@ import { fileURLToPath } from 'node:url';
 import {
   handleVerifyCode,
   isAuthenticatedRequest,
-  SESSION_DURATION_MS
+  isAdminRequest,
+  verifyAdminPassword,
+  createAdminToken,
+  getEnrollmentSetup,
+  confirmEnrollment,
+  resetEnrollment,
+  getActiveTOTPSecret,
+  SESSION_DURATION_MS,
+  ADMIN_SESSION_DURATION_MS
 } from './auth.js';
+import { verifyTOTP } from './totp.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DIST_DIR = path.resolve(__dirname, '../dist');
+const ADMIN_HTML_FILE = path.resolve(__dirname, 'admin-setup.html');
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -42,15 +52,14 @@ function parseJsonBody(req) {
     let body = '';
     req.on('data', (chunk) => {
       body += chunk;
-      // Protect against large payload flood
-      if (body.length > 10000) {
+      if (body.length > 20000) {
         req.destroy();
         resolve(null);
       }
     });
     req.on('end', () => {
       try {
-        resolve(JSON.parse(body));
+        resolve(JSON.parse(body || '{}'));
       } catch {
         resolve(null);
       }
@@ -67,13 +76,100 @@ const server = http.createServer(async (req, res) => {
     req.socket.remoteAddress ||
     '127.0.0.1';
 
-  // 1. API: Check Authentication Status
+  // 1. ADMIN UI ROUTE: /admin/setup or /admin
+  if (pathname === '/admin/setup' || pathname === '/admin') {
+    try {
+      const html = fs.readFileSync(ADMIN_HTML_FILE, 'utf-8');
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      });
+      return res.end(html);
+    } catch (err) {
+      res.writeHead(500);
+      return res.end('Admin setup page template missing.');
+    }
+  }
+
+  // 2. ADMIN API: Check Admin Login Status
+  if (pathname === '/api/admin/status' && req.method === 'GET') {
+    const isAdmin = isAdminRequest(req.headers.cookie);
+    return sendJson(res, 200, { isAdmin });
+  }
+
+  // 3. ADMIN API: Admin Password Login
+  if (pathname === '/api/admin/login' && req.method === 'POST') {
+    const body = await parseJsonBody(req);
+    const password = body?.password || '';
+    if (verifyAdminPassword(password)) {
+      const token = createAdminToken();
+      const cookieHeader = `urbana_admin_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(
+        ADMIN_SESSION_DURATION_MS / 1000
+      )}`;
+      return sendJson(res, 200, { success: true }, { 'Set-Cookie': cookieHeader });
+    } else {
+      return sendJson(res, 401, { success: false, error: 'Incorrect administrator password.' });
+    }
+  }
+
+  // 4. ADMIN API: Get Enrollment Data (QR Code & Secret)
+  if (pathname === '/api/admin/setup-data' && req.method === 'GET') {
+    if (!isAdminRequest(req.headers.cookie)) {
+      return sendJson(res, 401, { error: 'Unauthorized administrator access' });
+    }
+    const data = await getEnrollmentSetup(false);
+    return sendJson(res, 200, data);
+  }
+
+  // 5. ADMIN API: Confirm & Activate TOTP Enrollment
+  if (pathname === '/api/admin/confirm' && req.method === 'POST') {
+    if (!isAdminRequest(req.headers.cookie)) {
+      return sendJson(res, 401, { error: 'Unauthorized administrator access' });
+    }
+    const body = await parseJsonBody(req);
+    const code = body?.code || '';
+    const result = confirmEnrollment(code);
+    if (result.success) {
+      return sendJson(res, 200, { success: true });
+    } else {
+      return sendJson(res, 400, result);
+    }
+  }
+
+  // 6. ADMIN API: Reset Enrollment
+  if (pathname === '/api/admin/reset' && req.method === 'POST') {
+    if (!isAdminRequest(req.headers.cookie)) {
+      return sendJson(res, 401, { error: 'Unauthorized administrator access' });
+    }
+    const data = await resetEnrollment();
+    return sendJson(res, 200, data);
+  }
+
+  // 7. ADMIN API: Test Current Authenticator Code
+  if (pathname === '/api/admin/test-code' && req.method === 'POST') {
+    if (!isAdminRequest(req.headers.cookie)) {
+      return sendJson(res, 401, { error: 'Unauthorized administrator access' });
+    }
+    const body = await parseJsonBody(req);
+    const code = body?.code || '';
+    const secret = getActiveTOTPSecret();
+    const valid = secret ? verifyTOTP(code, secret, 1) : false;
+    return sendJson(res, 200, { valid });
+  }
+
+  // 8. ADMIN API: Logout
+  if (pathname === '/api/admin/logout' && req.method === 'POST') {
+    const cookieHeader = `urbana_admin_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+    return sendJson(res, 200, { success: true }, { 'Set-Cookie': cookieHeader });
+  }
+
+  // 9. VISITOR API: Check Visitor Authentication Status
   if (pathname === '/api/auth/status' && req.method === 'GET') {
     const isAuthed = isAuthenticatedRequest(req.headers.cookie);
     return sendJson(res, 200, { authenticated: isAuthed });
   }
 
-  // 2. API: Verify TOTP Code
+  // 10. VISITOR API: Verify TOTP Code
   if (pathname === '/api/auth/verify' && req.method === 'POST') {
     const body = await parseJsonBody(req);
     if (!body || !body.code) {
@@ -100,14 +196,13 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 3. API: Logout
+  // 11. VISITOR API: Logout
   if (pathname === '/api/auth/logout' && req.method === 'POST') {
     const cookieHeader = `urbana_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
     return sendJson(res, 200, { success: true }, { 'Set-Cookie': cookieHeader });
   }
 
-  // 4. PROTECTED ASSETS ACCESS CONTROL
-  // Prevent unauthorized access to high-res property panoramas and gallery assets
+  // 12. PROTECTED ASSETS ACCESS CONTROL
   const isProtectedAsset =
     pathname.startsWith('/assets/panoramas/') ||
     pathname.startsWith('/assets/gallery/');
@@ -121,16 +216,14 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 5. Static File Serving from dist/
+  // 13. Static File Serving from dist/
   let filePath = path.join(DIST_DIR, pathname);
 
-  // Normalize and prevent path traversal
   if (!filePath.startsWith(DIST_DIR)) {
     res.writeHead(403);
     return res.end('Forbidden');
   }
 
-  // Check if target is a file or fallback to index.html for SPA routing
   let stat = null;
   try {
     stat = fs.statSync(filePath);
@@ -139,7 +232,6 @@ const server = http.createServer(async (req, res) => {
       stat = fs.statSync(filePath);
     }
   } catch {
-    // If not found and client requests an HTML navigation, serve index.html
     if (!path.extname(pathname)) {
       filePath = path.join(DIST_DIR, 'index.html');
       try {
@@ -157,12 +249,10 @@ const server = http.createServer(async (req, res) => {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-  // Cache policy
   let cacheControl = 'public, max-age=3600';
   if (ext === '.html') {
     cacheControl = 'no-cache, must-revalidate';
   } else if (filePath.includes('/assets/')) {
-    // Fingerprinted assets can be cached aggressively
     cacheControl = 'public, max-age=31536000, immutable';
   }
 
@@ -178,5 +268,6 @@ const server = http.createServer(async (req, res) => {
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`The Urbana Secure Virtual Tour running at http://localhost:${PORT}`);
+  console.log(`The Urbana Virtual Tour running at http://localhost:${PORT}`);
+  console.log(`Administrator TOTP Setup available at http://localhost:${PORT}/admin/setup`);
 });

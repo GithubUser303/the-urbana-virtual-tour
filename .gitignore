@@ -34,4 +34,5 @@ desktop.ini
 server/.*secret*
 server/.totp_secret
 server/.session_secret
-
+server/.admin_key
+server/.totp_enrolled

@@ -123,3 +123,4 @@ export function generateOtpAuthUri(accountName, issuer, secretBase32) {
   const encAccount = encodeURIComponent(accountName);
   return `otpauth://totp/${encIssuer}:${encAccount}?secret=${secretBase32}&issuer=${encIssuer}&algorithm=SHA1&digits=6&period=30`;
 }
+

@@ -1,8 +1,19 @@
-import { getEnrollmentInfo } from '../server/auth.js';
-import { generateTOTPCode } from '../server/totp.js';
+import { getEnrollmentSetup, getActiveTOTPSecret } from '../server/auth.js';
+import { generateTOTPCode, generateOtpAuthUri } from '../server/totp.js';
 
 async function run() {
-  const { secret, uri } = getEnrollmentInfo();
+  const activeSecret = getActiveTOTPSecret();
+  let secret = activeSecret;
+  let uri = '';
+
+  if (activeSecret) {
+    uri = generateOtpAuthUri('Resident', 'The Urbana', activeSecret);
+  } else {
+    const setup = await getEnrollmentSetup();
+    secret = setup.secret;
+    uri = setup.uri;
+  }
+
   const currentCode = generateTOTPCode(secret);
 
   console.log('\n============================================================');
@@ -29,6 +40,7 @@ async function run() {
   console.log('------------------------------------------------------------');
   console.log(`Live 6-Digit Code right now:  [ ${currentCode} ]`);
   console.log('============================================================\n');
+  console.log('Web-based enrollment interface: http://localhost:3000/admin/setup\n');
 }
 
 run().catch((err) => {
