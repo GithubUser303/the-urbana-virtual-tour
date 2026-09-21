@@ -220,6 +220,12 @@ export class AuthGate {
   }
 
   private handleSuccess(): void {
+    try {
+      sessionStorage.setItem('tourTabAuthenticated', 'true');
+    } catch {
+      // Safe fallback if sessionStorage is unavailable in strict sandbox
+    }
+
     // Graceful fade out and reveal the tour intro
     this.element.classList.add('auth-fade-out');
 

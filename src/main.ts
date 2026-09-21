@@ -51,6 +51,26 @@ export class TourApp {
   private isCheckingSession = false;
   private currentAuthGate: AuthGate | null = null;
 
+  private isTabAuthenticated(): boolean {
+    try {
+      return sessionStorage.getItem('tourTabAuthenticated') === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  private setTabAuthenticated(): void {
+    try {
+      sessionStorage.setItem('tourTabAuthenticated', 'true');
+    } catch {}
+  }
+
+  private clearTabAuthenticated(): void {
+    try {
+      sessionStorage.removeItem('tourTabAuthenticated');
+    } catch {}
+  }
+
   private setupSessionLifecycle(): void {
     // 1. Re-verify session when tab becomes visible (user returns to browser or device wakes)
     document.addEventListener('visibilitychange', () => {
@@ -70,6 +90,12 @@ export class TourApp {
     this.isCheckingSession = true;
 
     try {
+      // If this tab's sessionStorage marker is missing, trigger re-authentication
+      if (!this.isTabAuthenticated()) {
+        this.handleSessionExpired(false);
+        return;
+      }
+
       const res = await fetch('/api/auth/status', {
         method: 'GET',
         headers: { 'Cache-Control': 'no-cache', 'Accept': 'application/json' },
@@ -78,6 +104,7 @@ export class TourApp {
       const data = await res.json();
 
       if (!res.ok || !data?.authenticated) {
+        this.clearTabAuthenticated();
         this.handleSessionExpired(!!data?.expired);
       }
     } catch {
@@ -96,6 +123,7 @@ export class TourApp {
 
     this.currentAuthGate = new AuthGate(() => {
       this.currentAuthGate = null;
+      this.setTabAuthenticated();
       if (!this.isMounted) {
         this.mountTour();
       }
@@ -113,12 +141,20 @@ export class TourApp {
       });
       const data = await res.json();
 
-      if (res.ok && data.authenticated) {
-        // Already authenticated session
+      const serverAuthed = res.ok && !!data?.authenticated;
+      const tabAuthed = this.isTabAuthenticated();
+
+      if (serverAuthed && tabAuthed) {
+        // Both valid server session AND current tab marker exist:
+        // Allow immediate entry (persists across page reloads in the same tab)
         this.mountTour();
       } else {
-        // Display secure TOTP access gate
-        this.handleSessionExpired(!!data?.expired);
+        // If server session is invalid or expired, clear any stale tab marker
+        if (!serverAuthed) {
+          this.clearTabAuthenticated();
+        }
+        // Require fresh TOTP verification for this tab or expired session
+        this.handleSessionExpired(serverAuthed ? false : !!data?.expired);
       }
     } catch {
       // Fallback to AuthGate on network or unverified states
