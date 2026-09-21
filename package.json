@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "start": "node server/server.js",
-    "auth:setup": "node scripts/setup-totp.js"
+    "auth:setup": "node scripts/setup-totp.js",
+    "set-admin": "node scripts/set-admin.js"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
