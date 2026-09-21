@@ -46,6 +46,8 @@ export class CameraControl {
   // Drag interaction state
   private isDragging = false;
   private isTouchDrag = false;
+  private activePointerId: number | null = null;
+  private isPinching = false;
   private previousMousePosition = { x: 0, y: 0 };
   private touchStartDistance = 0;
   private touchStartFov = 75;
@@ -58,6 +60,17 @@ export class CameraControl {
   private lastMoveTime = 0;
   private isAndroid = false;
   private isIOS = false;
+
+  // Bound event handlers for clean lifecycle and pointer capture
+  private onPointerDownBound: (e: PointerEvent) => void;
+  private onPointerMoveBound: (e: PointerEvent) => void;
+  private onPointerUpBound: (e: PointerEvent) => void;
+  private onPointerCancelBound: (e: PointerEvent) => void;
+  private onLostPointerCaptureBound: (e: PointerEvent) => void;
+  private onWheelBound: (e: WheelEvent) => void;
+  private onTouchStartBound: (e: TouchEvent) => void;
+  private onTouchMoveBound: (e: TouchEvent) => void;
+  private onTouchEndBound: (e: TouchEvent) => void;
 
   // Smooth room transition orientation lerp
   private isTransitioning = false;
@@ -72,6 +85,12 @@ export class CameraControl {
     this.camera = camera;
     this.domElement = domElement;
     this.tourState = TourState.get();
+
+    // Enforce touch-action none on the container to prevent Android Chrome scroll interruption
+    this.domElement.style.touchAction = 'none';
+    this.domElement.style.userSelect = 'none';
+    (this.domElement.style as any).webkitUserSelect = 'none';
+    (this.domElement.style as any).webkitTouchCallout = 'none';
 
     if (options) {
       if (options.dampingFactor !== undefined) this.dampingFactor = options.dampingFactor;
@@ -89,6 +108,17 @@ export class CameraControl {
       this.isAndroid = /Android/i.test(ua);
       this.isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     }
+
+    // Bind event handler references once
+    this.onPointerDownBound = this.onPointerDown.bind(this);
+    this.onPointerMoveBound = this.onPointerMove.bind(this);
+    this.onPointerUpBound = this.onPointerUp.bind(this);
+    this.onPointerCancelBound = this.onPointerCancel.bind(this);
+    this.onLostPointerCaptureBound = this.onLostPointerCapture.bind(this);
+    this.onWheelBound = this.onWheel.bind(this);
+    this.onTouchStartBound = this.onTouchStart.bind(this);
+    this.onTouchMoveBound = this.onTouchMove.bind(this);
+    this.onTouchEndBound = this.onTouchEnd.bind(this);
 
     this.initEvents();
   }
@@ -126,24 +156,34 @@ export class CameraControl {
   private initEvents(): void {
     const el = this.domElement;
 
-    // Pointer events for unified mouse and single touch
-    el.addEventListener('pointerdown', this.onPointerDown.bind(this), { passive: false });
-    window.addEventListener('pointermove', this.onPointerMove.bind(this), { passive: false });
-    window.addEventListener('pointerup', this.onPointerUp.bind(this));
-    window.addEventListener('pointercancel', this.onPointerUp.bind(this));
+    // Pointer events for unified mouse and single touch dragging
+    el.addEventListener('pointerdown', this.onPointerDownBound, { passive: false });
+    window.addEventListener('pointermove', this.onPointerMoveBound, { passive: false });
+    window.addEventListener('pointerup', this.onPointerUpBound);
+    window.addEventListener('pointercancel', this.onPointerCancelBound);
+    el.addEventListener('lostpointercapture', this.onLostPointerCaptureBound);
 
     // Wheel zoom
-    el.addEventListener('wheel', this.onWheel.bind(this), { passive: false });
+    el.addEventListener('wheel', this.onWheelBound, { passive: false });
 
-    // Touch pinch-to-zoom
-    el.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: true });
-    el.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
-    el.addEventListener('touchend', this.onTouchEnd.bind(this), { passive: true });
+    // Touch pinch-to-zoom (two fingers)
+    el.addEventListener('touchstart', this.onTouchStartBound, { passive: false });
+    el.addEventListener('touchmove', this.onTouchMoveBound, { passive: false });
+    el.addEventListener('touchend', this.onTouchEndBound, { passive: true });
+    el.addEventListener('touchcancel', this.onTouchEndBound, { passive: true });
   }
 
   private onPointerDown(e: PointerEvent): void {
     // Only respond to primary button for mouse
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    // If already in pinch gesture, do not begin single-pointer drag
+    if (this.isPinching) return;
+
+    // If an existing pointer is already dragging, do not interrupt it
+    if (this.activePointerId !== null && this.isDragging) return;
+
+    this.activePointerId = e.pointerId;
     this.isDragging = true;
     this.isTouchDrag = e.pointerType === 'touch' || e.pointerType === 'pen';
     this.isTransitioning = false;
@@ -151,28 +191,48 @@ export class CameraControl {
     this.lastInteractionTime = Date.now();
     this.lastMoveTime = performance.now();
 
-    // Kill any active inertia immediately upon new touch/pointer contact
+    // Kill active inertia upon new touch/pointer contact
     this.inertiaVx = 0;
     this.inertiaVy = 0;
     this.velocityX = 0;
     this.velocityY = 0;
+
+    // Request pointer capture so all continuous moves are routed reliably
+    try {
+      this.domElement.setPointerCapture(e.pointerId);
+    } catch {}
+
+    // Prevent default touch actions (e.g. text selection, synthetic scroll)
+    if (e.cancelable) {
+      e.preventDefault();
+    }
   }
 
   private onPointerMove(e: PointerEvent): void {
     if (!this.isDragging) return;
+    if (this.isPinching) return;
+
+    // Only process moves from the captured active pointer
+    if (this.activePointerId !== null && e.pointerId !== this.activePointerId) {
+      return;
+    }
+
     const now = performance.now();
     this.lastInteractionTime = Date.now();
 
     const deltaX = e.clientX - this.previousMousePosition.x;
     const deltaY = e.clientY - this.previousMousePosition.y;
 
+    // Always update previous pointer position for every movement event
     this.previousMousePosition = { x: e.clientX, y: e.clientY };
+
+    if (deltaX === 0 && deltaY === 0) return;
 
     // Differentiate touch vs mouse sensitivity
     let baseSensitivity = 0.16; // default desktop mouse sensitivity
     if (e.pointerType === 'touch' || e.pointerType === 'pen' || this.isTouchDrag) {
       if (this.isAndroid) {
-        baseSensitivity = 0.38; // significantly increased responsiveness for Android touchscreens
+        baseSensitivity = 0.38; // highly responsive for Android touchscreens
       } else if (this.isIOS) {
         baseSensitivity = 0.32; // smooth and responsive on iOS Safari
       } else {
@@ -201,9 +261,25 @@ export class CameraControl {
       this.velocityX = this.velocityX * 0.35 + instVx * 0.65;
       this.velocityY = this.velocityY * 0.35 + instVy * 0.65;
     }
+
+    if (e.cancelable) {
+      e.preventDefault();
+    }
   }
 
-  private onPointerUp(): void {
+  private onPointerUp(e: PointerEvent): void {
+    if (this.activePointerId !== null && e.pointerId !== this.activePointerId) {
+      return;
+    }
+
+    // Release pointer capture cleanly
+    try {
+      if (this.domElement.hasPointerCapture(e.pointerId)) {
+        this.domElement.releasePointerCapture(e.pointerId);
+      }
+    } catch {}
+
+    this.activePointerId = null;
     this.isDragging = false;
     this.lastInteractionTime = Date.now();
 
@@ -225,6 +301,29 @@ export class CameraControl {
     }
   }
 
+  private onPointerCancel(e: PointerEvent): void {
+    if (this.activePointerId === null || e.pointerId === this.activePointerId) {
+      try {
+        if (this.domElement.hasPointerCapture(e.pointerId)) {
+          this.domElement.releasePointerCapture(e.pointerId);
+        }
+      } catch {}
+      this.activePointerId = null;
+      this.isDragging = false;
+      this.inertiaVx = 0;
+      this.inertiaVy = 0;
+    }
+  }
+
+  private onLostPointerCapture(e: PointerEvent): void {
+    if (this.activePointerId === e.pointerId) {
+      this.activePointerId = null;
+      this.isDragging = false;
+      this.inertiaVx = 0;
+      this.inertiaVy = 0;
+    }
+  }
+
   private onWheel(e: WheelEvent): void {
     e.preventDefault();
     this.lastInteractionTime = Date.now();
@@ -233,10 +332,22 @@ export class CameraControl {
   }
 
   private onTouchStart(e: TouchEvent): void {
-    if (e.touches.length === 2) {
+    if (e.touches.length >= 2) {
+      // Two-finger pinch gesture: cancel active single-finger dragging
+      this.isPinching = true;
       this.isDragging = false;
       this.inertiaVx = 0;
       this.inertiaVy = 0;
+
+      if (this.activePointerId !== null) {
+        try {
+          if (this.domElement.hasPointerCapture(this.activePointerId)) {
+            this.domElement.releasePointerCapture(this.activePointerId);
+          }
+        } catch {}
+        this.activePointerId = null;
+      }
+
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       this.touchStartDistance = Math.hypot(dx, dy);
@@ -245,20 +356,26 @@ export class CameraControl {
   }
 
   private onTouchMove(e: TouchEvent): void {
-    if (e.touches.length === 2) {
-      e.preventDefault();
+    if (e.touches.length >= 2) {
+      if (e.cancelable) e.preventDefault();
       this.lastInteractionTime = Date.now();
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.hypot(dx, dy);
-      const ratio = this.touchStartDistance / dist;
-      this.targetFov = Math.max(this.minFov, Math.min(this.maxFov, this.touchStartFov * ratio));
+      if (dist > 0 && this.touchStartDistance > 0) {
+        const ratio = this.touchStartDistance / dist;
+        this.targetFov = Math.max(this.minFov, Math.min(this.maxFov, this.touchStartFov * ratio));
+      }
     }
   }
 
   private onTouchEnd(e: TouchEvent): void {
     if (e.touches.length < 2) {
       this.touchStartDistance = 0;
+      this.isPinching = false;
+      // Do not jump-drag with the remaining finger; require fresh touch down to rotate
+      this.isDragging = false;
+      this.activePointerId = null;
     }
   }
 

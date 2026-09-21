@@ -53,6 +53,9 @@ export class Viewer360 {
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
+    this.renderer.domElement.style.touchAction = 'none';
+    this.renderer.domElement.style.userSelect = 'none';
+    (this.renderer.domElement.style as any).webkitUserSelect = 'none';
     container.appendChild(this.renderer.domElement);
 
     // 4. Sphere Meshes: Invert geometry along x-axis for unmirrored inside-facing equirectangular projection
