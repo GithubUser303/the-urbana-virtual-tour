@@ -28,6 +28,10 @@ desktop.ini
 *.sln
 *.sw?
 
-# Local environment files
+# Local environment & secret files
+.env
 .env*.local
+server/.*secret*
+server/.totp_secret
+server/.session_secret
 

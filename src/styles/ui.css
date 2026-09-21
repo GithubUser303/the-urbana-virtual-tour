@@ -1,6 +1,218 @@
 /* UI Component Layouts & Responsive Styles */
 
 /* ============================================================
+   0. SECURE AUTHENTICATOR (TOTP) ACCESS GATE
+   ============================================================ */
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #060709;
+  padding: 20px;
+  transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-backdrop {
+  position: absolute;
+  inset: -20px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(32px) brightness(0.35);
+  transform: scale(1.06);
+  pointer-events: none;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: clamp(290px, 86vw, 420px);
+  padding: clamp(24px, 4vh, 38px) clamp(22px, 4vw, 34px);
+  border-radius: 28px;
+  background: rgba(18, 24, 38, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65), 0 0 32px rgba(226, 185, 111, 0.08);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  animation: authCardIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: clamp(16px, 2.5vh, 24px);
+}
+
+.auth-title {
+  font-size: clamp(2.2rem, 5.2vw, 3.4rem);
+  font-weight: 300;
+  color: var(--text-primary);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+  letter-spacing: 2px;
+  margin: 0 0 6px 0;
+  line-height: 1.1;
+}
+
+.auth-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(226, 185, 111, 0.12);
+  border: 1px solid rgba(226, 185, 111, 0.32);
+  color: #e2b96f;
+  font-size: clamp(0.58rem, 1.1vw, 0.68rem);
+  font-weight: 600;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.auth-instruction {
+  font-size: clamp(0.72rem, 1.3vw, 0.84rem);
+  color: rgba(245, 245, 247, 0.65);
+  letter-spacing: 0.8px;
+  margin: 0;
+}
+
+.auth-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-input-container {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.auth-input {
+  width: 100%;
+  height: 56px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 18px;
+  color: #ffffff;
+  font-family: monospace, -apple-system, sans-serif;
+  font-size: clamp(1.4rem, 4vw, 1.8rem);
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: clamp(8px, 1.6vw, 14px);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-input:focus {
+  border-color: rgba(226, 185, 111, 0.65);
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 3px rgba(226, 185, 111, 0.2), 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.auth-error-msg {
+  min-height: 20px;
+  margin-bottom: 12px;
+  font-size: clamp(0.68rem, 1.2vw, 0.78rem);
+  color: #ff6b6b;
+  letter-spacing: 0.5px;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.auth-error-msg.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.auth-verify-btn {
+  width: 100%;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-size: clamp(0.74rem, 1.3vw, 0.84rem);
+  font-weight: 600;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.25s ease,
+              border-color 0.25s ease,
+              box-shadow 0.25s ease;
+}
+
+.auth-verify-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(255, 255, 255, 0.12);
+}
+
+.auth-verify-btn:active {
+  transform: scale(0.98);
+}
+
+.auth-verify-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: authSpin 0.75s linear infinite;
+}
+
+.auth-card.shake {
+  animation: authShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.auth-fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@keyframes authCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes authSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes authShake {
+  10%, 90% { transform: translate3d(-2px, 0, 0); }
+  20%, 80% { transform: translate3d(4px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+  40%, 60% { transform: translate3d(6px, 0, 0); }
+}
+
+/* ============================================================
    1. INTRO SCREEN (Section 15)
    ============================================================ */
 .intro-screen {

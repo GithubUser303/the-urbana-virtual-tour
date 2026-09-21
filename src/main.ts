@@ -10,6 +10,7 @@ import { Parallax } from './effects/Parallax';
 import { AudioManager } from './audio/AudioManager';
 import { Viewer360 } from './viewer/Viewer360';
 import { IntroScreen } from './ui/IntroScreen';
+import { AuthGate } from './ui/AuthGate';
 import { LoadingIndicator } from './ui/LoadingIndicator';
 import { TopBar } from './ui/TopBar';
 import { iPhoneSliderNav } from './ui/iPhoneSliderNav';
@@ -30,6 +31,7 @@ export class TourApp {
   public viewer!: Viewer360;
   public sliderNav!: iPhoneSliderNav;
   public introScreen!: IntroScreen;
+  private isMounted = false;
 
   constructor() {
     // 1. Initialize central reactive state
@@ -39,14 +41,42 @@ export class TourApp {
     GlassLight.init();
     Parallax.init();
 
-    // 3. Initialize audio manager
+    // 3. Initialize audio manager (persistent DOM element)
     AudioManager.init();
 
-    // 4. Mount Viewport & UI Components
-    this.mount();
+    // 4. Authenticate before mounting protected tour & loading assets
+    this.initAuthAndMount();
   }
 
-  private async mount(): Promise<void> {
+  private async initAuthAndMount(): Promise<void> {
+    try {
+      const res = await fetch('/api/auth/status', {
+        method: 'GET',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      const data = await res.json();
+
+      if (res.ok && data.authenticated) {
+        // Already authenticated session
+        this.mountTour();
+      } else {
+        // Display secure TOTP access gate
+        new AuthGate(() => {
+          this.mountTour();
+        });
+      }
+    } catch {
+      // Fallback to AuthGate on network or unverified states
+      new AuthGate(() => {
+        this.mountTour();
+      });
+    }
+  }
+
+  private async mountTour(): Promise<void> {
+    if (this.isMounted) return;
+    this.isMounted = true;
+
     const viewportContainer = document.getElementById('tour-viewport');
 
     if (!viewportContainer) {
@@ -74,11 +104,9 @@ export class TourApp {
     // 8. Load initial room (Living Room)
     try {
       await this.viewer.initFirstRoom();
-      // Dismiss intro screen once first room panorama is rendered
       this.introScreen.notifyFirstRoomReady();
     } catch (err) {
       console.error('Failed to load initial room panorama:', err);
-      // Ensure intro screen unlocks even if initial texture encounters network delays
       this.introScreen.notifyFirstRoomReady();
     }
   }
@@ -115,4 +143,3 @@ if (document.readyState === 'loading') {
 } else {
   window.PropertyTour.app = TourApp.start();
 }
-

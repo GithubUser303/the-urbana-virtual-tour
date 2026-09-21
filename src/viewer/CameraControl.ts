@@ -45,9 +45,19 @@ export class CameraControl {
 
   // Drag interaction state
   private isDragging = false;
+  private isTouchDrag = false;
   private previousMousePosition = { x: 0, y: 0 };
   private touchStartDistance = 0;
   private touchStartFov = 75;
+
+  // Velocity & tuned inertia tracking for responsive touch
+  private velocityX = 0;
+  private velocityY = 0;
+  private inertiaVx = 0;
+  private inertiaVy = 0;
+  private lastMoveTime = 0;
+  private isAndroid = false;
+  private isIOS = false;
 
   // Smooth room transition orientation lerp
   private isTransitioning = false;
@@ -71,6 +81,13 @@ export class CameraControl {
       if (options.maxPitch !== undefined) this.maxPitch = options.maxPitch;
       if (options.minFov !== undefined) this.minFov = options.minFov;
       if (options.maxFov !== undefined) this.maxFov = options.maxFov;
+    }
+
+    // Platform detection for mobile touch sensitivity tuning
+    if (typeof navigator !== 'undefined') {
+      const ua = navigator.userAgent || '';
+      this.isAndroid = /Android/i.test(ua);
+      this.isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     }
 
     this.initEvents();
@@ -125,16 +142,25 @@ export class CameraControl {
   }
 
   private onPointerDown(e: PointerEvent): void {
-    // Only respond to primary button
+    // Only respond to primary button for mouse
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     this.isDragging = true;
+    this.isTouchDrag = e.pointerType === 'touch' || e.pointerType === 'pen';
     this.isTransitioning = false;
     this.previousMousePosition = { x: e.clientX, y: e.clientY };
     this.lastInteractionTime = Date.now();
+    this.lastMoveTime = performance.now();
+
+    // Kill any active inertia immediately upon new touch/pointer contact
+    this.inertiaVx = 0;
+    this.inertiaVy = 0;
+    this.velocityX = 0;
+    this.velocityY = 0;
   }
 
   private onPointerMove(e: PointerEvent): void {
     if (!this.isDragging) return;
+    const now = performance.now();
     this.lastInteractionTime = Date.now();
 
     const deltaX = e.clientX - this.previousMousePosition.x;
@@ -142,18 +168,61 @@ export class CameraControl {
 
     this.previousMousePosition = { x: e.clientX, y: e.clientY };
 
-    // Scale sensitivity by current FOV
-    const sensitivity = (this.currentFov / 75) * 0.16;
+    // Differentiate touch vs mouse sensitivity
+    let baseSensitivity = 0.16; // default desktop mouse sensitivity
+    if (e.pointerType === 'touch' || e.pointerType === 'pen' || this.isTouchDrag) {
+      if (this.isAndroid) {
+        baseSensitivity = 0.38; // significantly increased responsiveness for Android touchscreens
+      } else if (this.isIOS) {
+        baseSensitivity = 0.32; // smooth and responsive on iOS Safari
+      } else {
+        baseSensitivity = 0.35;
+      }
+    }
 
-    // Drag 360 view screen: goes right when dragging left and vice versa; goes down when dragging up and vice versa
-    this.targetYaw += deltaX * sensitivity;
-    this.targetPitch += deltaY * sensitivity;
+    // Scale sensitivity by current FOV
+    const sensitivity = (this.currentFov / 75) * baseSensitivity;
+
+    const moveYaw = deltaX * sensitivity;
+    const movePitch = deltaY * sensitivity;
+
+    // Natural drag interaction: finger moves left -> view pans left, finger moves right -> view pans right
+    this.targetYaw += moveYaw;
+    this.targetPitch += movePitch;
     this.targetPitch = Math.max(this.minPitch, Math.min(this.maxPitch, this.targetPitch));
+
+    // Track movement velocity for inertia calculation upon release
+    const dt = Math.max(1, now - this.lastMoveTime);
+    this.lastMoveTime = now;
+
+    if (this.isTouchDrag) {
+      const instVx = moveYaw / dt;
+      const instVy = movePitch / dt;
+      this.velocityX = this.velocityX * 0.35 + instVx * 0.65;
+      this.velocityY = this.velocityY * 0.35 + instVy * 0.65;
+    }
   }
 
   private onPointerUp(): void {
     this.isDragging = false;
     this.lastInteractionTime = Date.now();
+
+    if (this.isTouchDrag) {
+      const timeSinceLastMove = performance.now() - this.lastMoveTime;
+      // Only apply inertia if finger was released during active motion
+      if (timeSinceLastMove < 80) {
+        // Clamp maximum impulse per frame to avoid uncontrolled spinning
+        const maxImpulse = this.isAndroid ? 2.8 : 2.4;
+        this.inertiaVx = Math.max(-maxImpulse, Math.min(maxImpulse, this.velocityX * 16));
+        this.inertiaVy = Math.max(-maxImpulse, Math.min(maxImpulse, this.velocityY * 16));
+      } else {
+        this.inertiaVx = 0;
+        this.inertiaVy = 0;
+      }
+    } else {
+      this.inertiaVx = 0;
+      this.inertiaVy = 0;
+    }
   }
 
   private onWheel(e: WheelEvent): void {
@@ -166,6 +235,8 @@ export class CameraControl {
   private onTouchStart(e: TouchEvent): void {
     if (e.touches.length === 2) {
       this.isDragging = false;
+      this.inertiaVx = 0;
+      this.inertiaVy = 0;
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       this.touchStartDistance = Math.hypot(dx, dy);
@@ -213,15 +284,30 @@ export class CameraControl {
       if (
         this.isAutoRotateEnabled &&
         !this.isDragging &&
+        Math.abs(this.inertiaVx) < 0.01 &&
+        Math.abs(this.inertiaVy) < 0.01 &&
         Date.now() - this.lastInteractionTime > this.autoRotateInactivityDelay &&
         this.tourState.getState().activeModal === 'none'
       ) {
         this.targetYaw += this.autoRotateSpeed;
       }
 
-      // Smooth inertia damping
-      this.currentYaw += (this.targetYaw - this.currentYaw) * this.dampingFactor;
-      this.currentPitch += (this.targetPitch - this.currentPitch) * this.dampingFactor;
+      // Apply decaying touch inertia when released
+      if (Math.abs(this.inertiaVx) > 0.005 || Math.abs(this.inertiaVy) > 0.005) {
+        this.targetYaw += this.inertiaVx;
+        this.targetPitch += this.inertiaVy;
+        this.targetPitch = Math.max(this.minPitch, Math.min(this.maxPitch, this.targetPitch));
+
+        // Tuned exponential decay (~350ms settle to full stop)
+        this.inertiaVx *= 0.91;
+        this.inertiaVy *= 0.91;
+      }
+
+      // Damping: during active touch drag, use higher factor for immediate finger tracking;
+      // during mouse drag or settle, use standard smooth damping factor
+      const activeDamping = this.isDragging && this.isTouchDrag ? 0.42 : this.dampingFactor;
+      this.currentYaw += (this.targetYaw - this.currentYaw) * activeDamping;
+      this.currentPitch += (this.targetPitch - this.currentPitch) * activeDamping;
     }
 
     // FOV damping
