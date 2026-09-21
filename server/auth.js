@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Persistent secret & state file paths
-const DEFAULT_SEED_SECRET = 'UP5Q2O3RGONR2ODIBCLM33ICPA6T7DGX';
+const DEFAULT_SEED_SECRET = 'LC2O7SW4KOULE42CL5NWAIYVEZTU5BSG';
 
 // Safe filesystem helpers (supports read-only serverless Lambda and local environments)
 function getTmpDir() {
