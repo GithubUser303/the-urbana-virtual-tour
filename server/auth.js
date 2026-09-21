@@ -225,7 +225,15 @@ function getSessionSigningKey() {
 }
 
 const SESSION_SIGNING_KEY = getSessionSigningKey();
-export const SESSION_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+// Configurable Server-Side Session Lifetime (Default: 4 hours)
+export const SESSION_MAX_AGE_HOURS = parseInt(process.env.SESSION_MAX_AGE_HOURS || '4', 10);
+// Optional Inactivity Timeout (structure prepared for future idle timeout policy)
+export const SESSION_IDLE_TIMEOUT_HOURS = process.env.SESSION_IDLE_TIMEOUT_HOURS
+  ? parseFloat(process.env.SESSION_IDLE_TIMEOUT_HOURS)
+  : null;
+
+export const SESSION_DURATION_MS = SESSION_MAX_AGE_HOURS * 60 * 60 * 1000;
 export const ADMIN_SESSION_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 // Rate-limiting map: ip -> { failedCount, lockUntil, windowStart }
@@ -275,13 +283,19 @@ export function recordSuccessfulAttempt(ip) {
 }
 
 /**
- * Issue signed visitor session cookie token.
+ * Issue signed visitor session cookie token with server-side expiration.
  */
 export function createSessionToken() {
+  const now = Date.now();
   const payload = {
-    exp: Date.now() + SESSION_DURATION_MS,
+    iat: now,
+    exp: now + SESSION_DURATION_MS,
     nonce: crypto.randomBytes(16).toString('hex')
   };
+
+  if (SESSION_IDLE_TIMEOUT_HOURS) {
+    payload.idleExp = now + Math.round(SESSION_IDLE_TIMEOUT_HOURS * 60 * 60 * 1000);
+  }
 
   const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto
@@ -296,9 +310,11 @@ export function createSessionToken() {
  * Issue signed admin session cookie token.
  */
 export function createAdminToken() {
+  const now = Date.now();
   const payload = {
     role: 'admin',
-    exp: Date.now() + ADMIN_SESSION_DURATION_MS,
+    iat: now,
+    exp: now + ADMIN_SESSION_DURATION_MS,
     nonce: crypto.randomBytes(16).toString('hex')
   };
 
@@ -312,12 +328,12 @@ export function createAdminToken() {
 }
 
 /**
- * Verify a signed token (visitor or admin).
+ * Inspect a signed token to determine validity and expiration status.
  */
-export function verifySessionToken(token, requiredRole = null) {
-  if (!token || typeof token !== 'string') return false;
+export function inspectSessionToken(token, requiredRole = null) {
+  if (!token || typeof token !== 'string') return { valid: false, reason: 'missing' };
   const parts = token.split('.');
-  if (parts.length !== 2) return false;
+  if (parts.length !== 2) return { valid: false, reason: 'malformed' };
 
   const [payloadStr, signature] = parts;
 
@@ -328,21 +344,34 @@ export function verifySessionToken(token, requiredRole = null) {
 
   try {
     if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
-      return false;
+      return { valid: false, reason: 'signature_mismatch' };
     }
   } catch {
-    return false;
+    return { valid: false, reason: 'signature_error' };
   }
 
   try {
     const payload = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf-8'));
-    if (!payload.exp || typeof payload.exp !== 'number') return false;
-    if (Date.now() > payload.exp) return false;
-    if (requiredRole && payload.role !== requiredRole) return false;
-    return true;
+    if (!payload.exp || typeof payload.exp !== 'number') {
+      return { valid: false, reason: 'no_exp' };
+    }
+    if (Date.now() > payload.exp) {
+      return { valid: false, expired: true, reason: 'expired' };
+    }
+    if (requiredRole && payload.role !== requiredRole) {
+      return { valid: false, reason: 'role_mismatch' };
+    }
+    return { valid: true, payload };
   } catch {
-    return false;
+    return { valid: false, reason: 'json_error' };
   }
+}
+
+/**
+ * Verify a signed token (visitor or admin).
+ */
+export function verifySessionToken(token, requiredRole = null) {
+  return inspectSessionToken(token, requiredRole).valid;
 }
 
 /**
@@ -404,6 +433,12 @@ export function isAuthenticatedRequest(cookieHeader) {
   return verifySessionToken(token);
 }
 
+export function inspectVisitorSession(cookieHeader) {
+  const cookies = parseCookies(cookieHeader);
+  const token = cookies['urbana_session'];
+  return inspectSessionToken(token);
+}
+
 /**
  * Check if request has an active valid admin session.
  */
@@ -411,4 +446,10 @@ export function isAdminRequest(cookieHeader) {
   const cookies = parseCookies(cookieHeader);
   const token = cookies['urbana_admin_session'];
   return verifySessionToken(token, 'admin');
+}
+
+export function inspectAdminSession(cookieHeader) {
+  const cookies = parseCookies(cookieHeader);
+  const token = cookies['urbana_admin_session'];
+  return inspectSessionToken(token, 'admin');
 }

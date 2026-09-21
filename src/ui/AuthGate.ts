@@ -13,10 +13,14 @@ export class AuthGate {
   private onSuccess: () => void;
   private isVerifying = false;
 
-  constructor(onSuccess: () => void) {
+  constructor(onSuccess: () => void, initialMessage?: string) {
     this.onSuccess = onSuccess;
     this.element = this.createElement();
     document.body.appendChild(this.element);
+
+    if (initialMessage) {
+      this.showError(initialMessage);
+    }
 
     this.bindEvents();
 

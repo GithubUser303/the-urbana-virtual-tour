@@ -1,4 +1,4 @@
-import { isAuthenticatedRequest } from '../../server/auth.js';
+import { inspectVisitorSession } from '../../server/auth.js';
 import { handleCors, sendJson } from '../_helper.js';
 
 export default async function handler(req, res) {
@@ -10,10 +10,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const isAuthed = isAuthenticatedRequest(req.headers.cookie);
-    return sendJson(res, 200, { authenticated: isAuthed });
+    const inspection = inspectVisitorSession(req.headers.cookie);
+    if (inspection.valid) {
+      return sendJson(res, 200, { authenticated: true });
+    }
+    return sendJson(res, 200, {
+      authenticated: false,
+      expired: !!inspection.expired
+    });
   } catch (err) {
     console.error('[api/auth/status] Error:', err);
-    return sendJson(res, 200, { authenticated: false });
+    return sendJson(res, 200, { authenticated: false, expired: false });
   }
 }
+

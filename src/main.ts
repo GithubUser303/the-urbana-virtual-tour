@@ -48,7 +48,63 @@ export class TourApp {
     this.initAuthAndMount();
   }
 
+  private isCheckingSession = false;
+  private currentAuthGate: AuthGate | null = null;
+
+  private setupSessionLifecycle(): void {
+    // 1. Re-verify session when tab becomes visible (user returns to browser or device wakes)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.verifyActiveSession();
+      }
+    });
+
+    // 2. Periodic background verification check (every 3 minutes)
+    setInterval(() => {
+      this.verifyActiveSession();
+    }, 3 * 60 * 1000);
+  }
+
+  private async verifyActiveSession(): Promise<void> {
+    if (this.isCheckingSession) return;
+    this.isCheckingSession = true;
+
+    try {
+      const res = await fetch('/api/auth/status', {
+        method: 'GET',
+        headers: { 'Cache-Control': 'no-cache', 'Accept': 'application/json' },
+        credentials: 'include'
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data?.authenticated) {
+        this.handleSessionExpired(!!data?.expired);
+      }
+    } catch {
+      // Don't interrupt on temporary network drop; only react when server explicitly reports invalid
+    } finally {
+      this.isCheckingSession = false;
+    }
+  }
+
+  private handleSessionExpired(isExpired = false): void {
+    if (this.currentAuthGate || document.getElementById('auth-gate')) return;
+
+    const message = isExpired
+      ? 'Your session has expired. Please authenticate again.'
+      : undefined;
+
+    this.currentAuthGate = new AuthGate(() => {
+      this.currentAuthGate = null;
+      if (!this.isMounted) {
+        this.mountTour();
+      }
+    }, message);
+  }
+
   private async initAuthAndMount(): Promise<void> {
+    this.setupSessionLifecycle();
+
     try {
       const res = await fetch('/api/auth/status', {
         method: 'GET',
@@ -62,15 +118,11 @@ export class TourApp {
         this.mountTour();
       } else {
         // Display secure TOTP access gate
-        new AuthGate(() => {
-          this.mountTour();
-        });
+        this.handleSessionExpired(!!data?.expired);
       }
     } catch {
       // Fallback to AuthGate on network or unverified states
-      new AuthGate(() => {
-        this.mountTour();
-      });
+      this.handleSessionExpired(false);
     }
   }
 

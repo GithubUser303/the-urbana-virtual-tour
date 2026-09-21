@@ -1,5 +1,5 @@
-import { handleVerifyCode, SESSION_DURATION_MS } from '../../server/auth.js';
-import { handleCors, readBody, sendJson, getClientIp, setCookie } from '../_helper.js';
+import { handleVerifyCode } from '../../server/auth.js';
+import { handleCors, readBody, sendJson, getClientIp, setSessionCookie } from '../_helper.js';
 
 export default async function handler(req, res) {
   if (handleCors(req, res)) return;
@@ -24,7 +24,8 @@ export default async function handler(req, res) {
     const result = handleVerifyCode(code, clientIp);
 
     if (result.success) {
-      setCookie(res, req, 'urbana_session', result.token, SESSION_DURATION_MS);
+      // Browser Session Cookie (omits Max-Age/Expires so closing the browser/tab clears it)
+      setSessionCookie(res, req, 'urbana_session', result.token);
       return sendJson(res, 200, { success: true });
     }
 
@@ -44,3 +45,4 @@ export default async function handler(req, res) {
     });
   }
 }
+

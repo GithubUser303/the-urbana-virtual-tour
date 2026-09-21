@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {
   handleVerifyCode,
   isAuthenticatedRequest,
+  inspectVisitorSession,
   isAdminRequest,
   verifyAdminPassword,
   createAdminToken,
@@ -165,8 +166,14 @@ const server = http.createServer(async (req, res) => {
 
   // 9. VISITOR API: Check Visitor Authentication Status
   if (pathname === '/api/auth/status' && req.method === 'GET') {
-    const isAuthed = isAuthenticatedRequest(req.headers.cookie);
-    return sendJson(res, 200, { authenticated: isAuthed });
+    const inspection = inspectVisitorSession(req.headers.cookie);
+    if (inspection.valid) {
+      return sendJson(res, 200, { authenticated: true });
+    }
+    return sendJson(res, 200, {
+      authenticated: false,
+      expired: !!inspection.expired
+    });
   }
 
   // 10. VISITOR API: Verify TOTP Code
@@ -183,9 +190,8 @@ const server = http.createServer(async (req, res) => {
 
     if (result.success) {
       const isSecure = process.env.NODE_ENV === 'production' || req.headers['x-forwarded-proto'] === 'https';
-      const cookieHeader = `urbana_session=${result.token}; Path=/; HttpOnly; SameSite=Lax; ${isSecure ? 'Secure; ' : ''}Max-Age=${Math.floor(
-        SESSION_DURATION_MS / 1000
-      )}`;
+      // Browser Session Cookie (omits Max-Age/Expires so closing the browser/tab clears it)
+      const cookieHeader = `urbana_session=${result.token}; Path=/; HttpOnly; SameSite=Lax${isSecure ? '; Secure' : ''}`;
       return sendJson(
         res,
         200,

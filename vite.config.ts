@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {
   handleVerifyCode,
   isAuthenticatedRequest,
+  inspectVisitorSession,
   isAdminRequest,
   verifyAdminPassword,
   createAdminToken,
@@ -164,10 +165,14 @@ function urbanaAuthDevPlugin(): Plugin {
 
         // 9. VISITOR API: Check Auth Status
         if (pathname === '/api/auth/status' && req.method === 'GET') {
-          const isAuthed = isAuthenticatedRequest(req.headers.cookie);
+          const inspection = inspectVisitorSession(req.headers.cookie);
           res.setHeader('Content-Type', 'application/json');
           res.setHeader('Cache-Control', 'no-store');
-          res.end(JSON.stringify({ authenticated: isAuthed }));
+          if (inspection.valid) {
+            res.end(JSON.stringify({ authenticated: true }));
+          } else {
+            res.end(JSON.stringify({ authenticated: false, expired: !!inspection.expired }));
+          }
           return;
         }
 
@@ -187,9 +192,8 @@ function urbanaAuthDevPlugin(): Plugin {
           const result = handleVerifyCode(code, clientIp);
 
           if (result.success) {
-            const cookieHeader = `urbana_session=${result.token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(
-              SESSION_DURATION_MS / 1000
-            )}`;
+            // Browser Session Cookie (omits Max-Age/Expires so closing the browser/tab clears it)
+            const cookieHeader = `urbana_session=${result.token}; Path=/; HttpOnly; SameSite=Lax`;
             res.setHeader('Set-Cookie', cookieHeader);
             res.statusCode = 200;
             res.end(JSON.stringify({ success: true }));

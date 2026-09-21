@@ -12,3 +12,4 @@ export default async function handler(req, res) {
   const isAdmin = isAdminRequest(req.headers.cookie);
   return sendJson(res, 200, { isAdmin });
 }
+

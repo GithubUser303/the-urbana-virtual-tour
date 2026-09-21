@@ -11,3 +11,4 @@ export default async function handler(req, res) {
   clearCookie(res, 'urbana_session');
   return sendJson(res, 200, { success: true });
 }
+

@@ -66,17 +66,36 @@ export function getClientIp(req) {
   );
 }
 
-export function setCookie(res, req, name, value, maxAgeMs) {
+export function setSessionCookie(res, req, name, value) {
   const isSecure =
     process.env.NODE_ENV === 'production' ||
     req.headers['x-forwarded-proto'] === 'https';
-  const maxAgeSec = Math.floor(maxAgeMs / 1000);
-  const cookieStr = `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; ${
-    isSecure ? 'Secure; ' : ''
-  }Max-Age=${maxAgeSec}`;
+  // Omission of Max-Age and Expires makes this a browser-session cookie (RFC 6265)
+  // The browser automatically removes it when the browser/tab session closes.
+  const cookieStr = `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax${
+    isSecure ? '; Secure' : ''
+  }`;
+  res.setHeader('Set-Cookie', cookieStr);
+}
+
+export function setCookie(res, req, name, value, maxAgeMs = null) {
+  const isSecure =
+    process.env.NODE_ENV === 'production' ||
+    req.headers['x-forwarded-proto'] === 'https';
+  
+  let cookieStr = `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax${
+    isSecure ? '; Secure' : ''
+  }`;
+
+  if (typeof maxAgeMs === 'number' && maxAgeMs > 0) {
+    const maxAgeSec = Math.floor(maxAgeMs / 1000);
+    cookieStr += `; Max-Age=${maxAgeSec}`;
+  }
+
   res.setHeader('Set-Cookie', cookieStr);
 }
 
 export function clearCookie(res, name) {
   res.setHeader('Set-Cookie', `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
 }
+
