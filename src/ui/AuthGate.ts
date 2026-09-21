@@ -1,3 +1,5 @@
+import { AdminLoginModal } from './AdminLoginModal';
+
 /**
  * The Urbana — Secure Authenticator (TOTP) Access Gate.
  * Renders an architectural tinted-glass modal requiring a 6-digit TOTP
@@ -12,10 +14,10 @@ export class AuthGate {
   private submitBtn!: HTMLButtonElement;
   private spinnerElement!: HTMLElement;
   private btnTextElement!: HTMLElement;
-  private onSuccess: () => void;
+  private onSuccess: (role: 'user' | 'admin') => void;
   private isVerifying = false;
 
-  constructor(onSuccess: () => void, initialMessage?: string) {
+  constructor(onSuccess: (role: 'user' | 'admin') => void, initialMessage?: string) {
     this.onSuccess = onSuccess;
     this.element = this.createElement();
     document.body.appendChild(this.element);
@@ -54,6 +56,14 @@ export class AuthGate {
 
     const card = document.createElement('div');
     card.className = 'auth-card glass-panel';
+
+    const topBar = document.createElement('div');
+    topBar.className = 'auth-gate-top-bar';
+    topBar.innerHTML = `
+      <button type="button" class="auth-top-admin-btn glass-interactive" aria-label="Open Admin Login">
+        Admin Login
+      </button>
+    `;
 
     card.innerHTML = `
       <div class="auth-glow"></div>
@@ -96,6 +106,7 @@ export class AuthGate {
     `;
 
     backdrop.appendChild(bg);
+    backdrop.appendChild(topBar);
     backdrop.appendChild(card);
 
     this.inputContainer = card.querySelector('.auth-input-container')!;
@@ -131,6 +142,20 @@ export class AuthGate {
   }
 
   private bindEvents(): void {
+    // Top-right Admin Login button opens AdminLoginModal directly
+    const adminBtn = this.element.querySelector('.auth-top-admin-btn');
+    adminBtn?.addEventListener('click', () => {
+      AdminLoginModal.open(
+        () => {
+          this.handleSuccess('admin');
+        },
+        () => {
+          this.input.focus();
+          this.updateSlots();
+        }
+      );
+    });
+
     // Tapping container focuses hidden input
     this.inputContainer.addEventListener('click', () => {
       this.input.focus();
@@ -237,7 +262,7 @@ export class AuthGate {
       }
 
       if (response.ok && data?.success) {
-        this.handleSuccess();
+        this.handleSuccess('user');
         return;
       }
 
@@ -273,9 +298,10 @@ export class AuthGate {
     }
   }
 
-  private handleSuccess(): void {
+  private handleSuccess(role: 'user' | 'admin' = 'user'): void {
     try {
       sessionStorage.setItem('tourTabAuthenticated', 'true');
+      sessionStorage.setItem('tourRole', role);
     } catch {
       // Safe fallback if sessionStorage is unavailable in strict sandbox
     }
@@ -284,9 +310,13 @@ export class AuthGate {
     this.element.classList.add('auth-fade-out');
 
     setTimeout(() => {
-      this.element.remove();
-      this.onSuccess();
-    }, 550);
+      this.destroy();
+      this.onSuccess(role);
+    }, 500);
+  }
+
+  public destroy(): void {
+    this.element.remove();
   }
 
   private showError(msg: string): void {

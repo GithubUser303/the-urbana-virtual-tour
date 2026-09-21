@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   handleVerifyCode,
+  handleAdminLogin,
   isAuthenticatedRequest,
   inspectVisitorSession,
   isAdminRequest,
@@ -164,14 +165,45 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { success: true }, { 'Set-Cookie': cookieHeader });
   }
 
+  // 8b. ADMIN API: Username + Password Login for Tour
+  if (pathname === '/api/auth/admin-login' && req.method === 'POST') {
+    const body = await parseJsonBody(req);
+    const username = (body?.username || '').toString().trim();
+    const password = (body?.password || '').toString();
+
+    if (!username || !password) {
+      return sendJson(res, 400, {
+        success: false,
+        error: 'Please provide both username and password.'
+      });
+    }
+
+    const result = handleAdminLogin(username, password, clientIp);
+
+    if (result.success) {
+      const isSecure = process.env.NODE_ENV === 'production' || req.headers['x-forwarded-proto'] === 'https';
+      const cookieHeader = `urbana_session=${result.token}; Path=/; HttpOnly; SameSite=Lax${isSecure ? '; Secure' : ''}`;
+      return sendJson(res, 200, { success: true, role: 'admin' }, { 'Set-Cookie': cookieHeader });
+    } else {
+      return sendJson(res, result.statusCode || 401, {
+        success: false,
+        error: result.error || 'Invalid username or password.'
+      });
+    }
+  }
+
   // 9. VISITOR API: Check Visitor Authentication Status
   if (pathname === '/api/auth/status' && req.method === 'GET') {
     const inspection = inspectVisitorSession(req.headers.cookie);
     if (inspection.valid) {
-      return sendJson(res, 200, { authenticated: true });
+      return sendJson(res, 200, {
+        authenticated: true,
+        role: inspection.role || 'user'
+      });
     }
     return sendJson(res, 200, {
       authenticated: false,
+      role: inspection.role || null,
       expired: !!inspection.expired
     });
   }
@@ -195,7 +227,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(
         res,
         200,
-        { success: true },
+        { success: true, role: 'user' },
         { 'Set-Cookie': cookieHeader }
       );
     } else {
@@ -207,8 +239,15 @@ const server = http.createServer(async (req, res) => {
 
   // 11. VISITOR API: Logout
   if (pathname === '/api/auth/logout' && req.method === 'POST') {
-    const cookieHeader = `urbana_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
-    return sendJson(res, 200, { success: true }, { 'Set-Cookie': cookieHeader });
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Set-Cookie': [
+        'urbana_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+        'urbana_admin_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'
+      ]
+    });
+    return res.end(JSON.stringify({ success: true }));
   }
 
   // 12. PROTECTED ASSETS ACCESS CONTROL

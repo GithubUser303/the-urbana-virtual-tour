@@ -1,8 +1,11 @@
 import { TourState } from '../state/TourState';
+import { AdminLoginModal } from './AdminLoginModal';
 
 export class TopBar {
   private element: HTMLElement;
   private tourState: TourState;
+  private adminBtn!: HTMLButtonElement;
+  private adminBadge!: HTMLElement;
 
   constructor() {
     this.tourState = TourState.get();
@@ -16,6 +19,23 @@ export class TopBar {
         this.element.classList.remove('ui-hidden-top');
       }
     });
+
+    this.tourState.on('authRoleChange', () => {
+      this.updateAdminControl();
+    });
+
+    this.updateAdminControl();
+  }
+
+  private updateAdminControl(): void {
+    const isAdmin = this.tourState.getRole() === 'admin';
+    if (isAdmin) {
+      this.adminBtn.style.display = 'none';
+      this.adminBadge.style.display = 'inline-flex';
+    } else {
+      this.adminBtn.style.display = 'inline-flex';
+      this.adminBadge.style.display = 'none';
+    }
   }
 
   private createElement(): HTMLElement {
@@ -37,7 +57,10 @@ export class TopBar {
     brand.className = 'top-brand project-font-branding';
     brand.textContent = this.tourState.getConfig().projectName; // "The Urbana"
 
-    // Right button: Gallery
+    // Right group: Gallery + Admin Login / Admin Badge
+    const rightGroup = document.createElement('div');
+    rightGroup.className = 'top-bar-right-group';
+
     const galleryBtn = document.createElement('button');
     galleryBtn.className = 'nav-action-btn glass-interactive';
     galleryBtn.textContent = 'Gallery';
@@ -46,11 +69,29 @@ export class TopBar {
       this.tourState.openGallery();
     });
 
+    this.adminBtn = document.createElement('button');
+    this.adminBtn.className = 'nav-action-btn nav-admin-btn glass-interactive';
+    this.adminBtn.textContent = 'Admin Login';
+    this.adminBtn.setAttribute('aria-label', 'Open administrator login');
+    this.adminBtn.addEventListener('click', () => {
+      AdminLoginModal.open(() => {
+        this.tourState.setRole('admin');
+      });
+    });
+
+    this.adminBadge = document.createElement('span');
+    this.adminBadge.className = 'top-bar-admin-badge';
+    this.adminBadge.textContent = 'ADMIN';
+    this.adminBadge.style.display = 'none';
+
+    rightGroup.appendChild(galleryBtn);
+    rightGroup.appendChild(this.adminBtn);
+    rightGroup.appendChild(this.adminBadge);
+
     nav.appendChild(contactBtn);
     nav.appendChild(brand);
-    nav.appendChild(galleryBtn);
+    nav.appendChild(rightGroup);
 
     return nav;
   }
 }
-

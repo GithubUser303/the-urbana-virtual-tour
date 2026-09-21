@@ -12,15 +12,19 @@ export default async function handler(req, res) {
   try {
     const inspection = inspectVisitorSession(req.headers.cookie);
     if (inspection.valid) {
-      return sendJson(res, 200, { authenticated: true });
+      return sendJson(res, 200, {
+        authenticated: true,
+        role: inspection.role || 'user'
+      });
     }
     return sendJson(res, 200, {
       authenticated: false,
+      role: inspection.role || null,
       expired: !!inspection.expired
     });
   } catch (err) {
     console.error('[api/auth/status] Error:', err);
-    return sendJson(res, 200, { authenticated: false, expired: false });
+    return sendJson(res, 200, { authenticated: false, role: null, expired: false });
   }
 }
 

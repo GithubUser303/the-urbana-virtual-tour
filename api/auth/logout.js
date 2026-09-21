@@ -9,6 +9,11 @@ export default async function handler(req, res) {
   }
 
   clearCookie(res, 'urbana_session');
+  // Also clear legacy admin cookie if present
+  res.setHeader('Set-Cookie', [
+    'urbana_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+    'urbana_admin_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'
+  ]);
   return sendJson(res, 200, { success: true });
 }
 

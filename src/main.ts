@@ -21,6 +21,7 @@ import { ContactModal } from './ui/ContactModal';
 import { LocationModal } from './ui/LocationModal';
 import { ControlMenu } from './ui/ControlMenu';
 import { OrientationPrompt } from './ui/OrientationPrompt';
+import { AdminLoginModal } from './ui/AdminLoginModal';
 
 /**
  * The Urbana 360 Virtual Tour Application Bootstrapper
@@ -50,6 +51,7 @@ export class TourApp {
 
   private isCheckingSession = false;
   private currentAuthGate: AuthGate | null = null;
+  private currentAdminModal: AdminLoginModal | null = null;
 
   private isTabAuthenticated(): boolean {
     try {
@@ -59,15 +61,27 @@ export class TourApp {
     }
   }
 
-  private setTabAuthenticated(): void {
+  private getTabRole(): 'user' | 'admin' | null {
+    try {
+      return (sessionStorage.getItem('tourRole') as 'user' | 'admin') || null;
+    } catch {
+      return null;
+    }
+  }
+
+  private setTabAuthenticated(role: 'user' | 'admin' = 'user'): void {
     try {
       sessionStorage.setItem('tourTabAuthenticated', 'true');
+      sessionStorage.setItem('tourRole', role);
+      this.tourState.setRole(role);
     } catch {}
   }
 
   private clearTabAuthenticated(): void {
     try {
       sessionStorage.removeItem('tourTabAuthenticated');
+      sessionStorage.removeItem('tourRole');
+      this.tourState.setRole(null);
     } catch {}
   }
 
@@ -79,10 +93,10 @@ export class TourApp {
       }
     });
 
-    // 2. Periodic background verification check (every 3 minutes)
+    // 2. Periodic background verification check (every 2 minutes)
     setInterval(() => {
       this.verifyActiveSession();
-    }, 3 * 60 * 1000);
+    }, 2 * 60 * 1000);
   }
 
   private async verifyActiveSession(): Promise<void> {
@@ -92,7 +106,8 @@ export class TourApp {
     try {
       // If this tab's sessionStorage marker is missing, trigger re-authentication
       if (!this.isTabAuthenticated()) {
-        this.handleSessionExpired(false);
+        const lastRole = this.getTabRole() || 'user';
+        this.handleSessionExpired(false, lastRole);
         return;
       }
 
@@ -104,8 +119,12 @@ export class TourApp {
       const data = await res.json();
 
       if (!res.ok || !data?.authenticated) {
+        const expiredRole = (data?.role || this.getTabRole() || 'user') as 'user' | 'admin';
         this.clearTabAuthenticated();
-        this.handleSessionExpired(!!data?.expired);
+        this.handleSessionExpired(!!data?.expired, expiredRole);
+      } else {
+        const currentRole = (data?.role || 'user') as 'user' | 'admin';
+        this.setTabAuthenticated(currentRole);
       }
     } catch {
       // Don't interrupt on temporary network drop; only react when server explicitly reports invalid
@@ -114,16 +133,41 @@ export class TourApp {
     }
   }
 
-  private handleSessionExpired(isExpired = false): void {
-    if (this.currentAuthGate || document.getElementById('auth-gate')) return;
+  private handleSessionExpired(isExpired = false, role: 'user' | 'admin' = 'user'): void {
+    if (this.currentAuthGate || this.currentAdminModal || document.getElementById('auth-gate') || document.getElementById('admin-login-modal')) {
+      return;
+    }
+
+    if (role === 'admin') {
+      const message = isExpired
+        ? 'Your admin session has expired. Please log in again.'
+        : undefined;
+
+      this.currentAdminModal = new AdminLoginModal(
+        () => {
+          this.currentAdminModal = null;
+          this.setTabAuthenticated('admin');
+          if (!this.isMounted) {
+            this.mountTour();
+          }
+        },
+        () => {
+          this.currentAdminModal = null;
+          // Fall back to AuthGate if admin dialog is dismissed
+          this.handleSessionExpired(false, 'user');
+        },
+        message
+      );
+      return;
+    }
 
     const message = isExpired
       ? 'Your session has expired. Please authenticate again.'
       : undefined;
 
-    this.currentAuthGate = new AuthGate(() => {
+    this.currentAuthGate = new AuthGate((authedRole) => {
       this.currentAuthGate = null;
-      this.setTabAuthenticated();
+      this.setTabAuthenticated(authedRole || 'user');
       if (!this.isMounted) {
         this.mountTour();
       }
@@ -132,6 +176,14 @@ export class TourApp {
 
   private async initAuthAndMount(): Promise<void> {
     this.setupSessionLifecycle();
+
+    // Check if user requested admin screen directly or via recent admin logout
+    const openAdminOnLoad = sessionStorage.getItem('openAdminOnLoad') === 'true';
+    if (openAdminOnLoad) {
+      sessionStorage.removeItem('openAdminOnLoad');
+      this.handleSessionExpired(false, 'admin');
+      return;
+    }
 
     try {
       const res = await fetch('/api/auth/status', {
@@ -143,22 +195,24 @@ export class TourApp {
 
       const serverAuthed = res.ok && !!data?.authenticated;
       const tabAuthed = this.isTabAuthenticated();
+      const serverRole = (data?.role || 'user') as 'user' | 'admin';
 
       if (serverAuthed && tabAuthed) {
         // Both valid server session AND current tab marker exist:
-        // Allow immediate entry (persists across page reloads in the same tab)
+        // Set role and allow immediate entry (persists across page reloads in the same tab)
+        this.setTabAuthenticated(serverRole);
         this.mountTour();
       } else {
         // If server session is invalid or expired, clear any stale tab marker
         if (!serverAuthed) {
           this.clearTabAuthenticated();
         }
-        // Require fresh TOTP verification for this tab or expired session
-        this.handleSessionExpired(serverAuthed ? false : !!data?.expired);
+        const targetRole = (data?.role || this.getTabRole() || 'user') as 'user' | 'admin';
+        this.handleSessionExpired(serverAuthed ? false : !!data?.expired, targetRole);
       }
     } catch {
       // Fallback to AuthGate on network or unverified states
-      this.handleSessionExpired(false);
+      this.handleSessionExpired(false, 'user');
     }
   }
 

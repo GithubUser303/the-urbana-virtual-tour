@@ -1,5 +1,6 @@
 import { TourState } from '../state/TourState';
 import { AudioManager } from '../audio/AudioManager';
+import { AdminLoginModal } from './AdminLoginModal';
 
 export class ControlMenu {
   private element: HTMLElement;
@@ -11,6 +12,9 @@ export class ControlMenu {
   private fullscreenBtn!: HTMLButtonElement;
   private hideUiBtn!: HTMLButtonElement;
   private musicBtn!: HTMLButtonElement;
+  private adminLoginBtn!: HTMLButtonElement;
+  private logoutBtn!: HTMLButtonElement;
+  private logoutLabel!: HTMLElement;
   private lastActionTime = 0;
 
   constructor() {
@@ -60,6 +64,12 @@ export class ControlMenu {
     document.addEventListener('fullscreenchange', () => {
       this.tourState.setFullscreen(!!document.fullscreenElement);
     });
+
+    this.tourState.on('authRoleChange', () => {
+      this.updateRoleView();
+    });
+
+    this.updateRoleView();
   }
 
   private updateMusicButton(isMuted: boolean): void {
@@ -171,9 +181,58 @@ export class ControlMenu {
     this.musicBtn.addEventListener('pointerup', onAudioToggle);
     this.musicBtn.addEventListener('click', onAudioToggle);
 
+    // 4. Admin Login Button (responsive fallback)
+    this.adminLoginBtn = document.createElement('button');
+    this.adminLoginBtn.className = 'control-item-btn glass-interactive control-admin-login-btn';
+    this.adminLoginBtn.innerHTML = `
+      <span class="control-item-icon">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </span>
+      <span class="control-item-label">Admin Login</span>
+    `;
+    const onAdminLogin = (e: Event) => {
+      e.stopPropagation();
+      e.preventDefault();
+      this.close();
+      AdminLoginModal.open(() => {
+        this.tourState.setRole('admin');
+      });
+    };
+    this.adminLoginBtn.addEventListener('pointerup', onAdminLogin);
+    this.adminLoginBtn.addEventListener('click', onAdminLogin);
+
+    // 5. Logout Button (role aware: "Logout" vs "Admin Logout")
+    this.logoutBtn = document.createElement('button');
+    this.logoutBtn.className = 'control-item-btn glass-interactive control-logout-btn';
+    this.logoutBtn.innerHTML = `
+      <span class="control-item-icon">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </span>
+      <span class="control-item-label logout-label-text">Logout</span>
+    `;
+    this.logoutLabel = this.logoutBtn.querySelector('.logout-label-text')!;
+
+    const onLogout = (e: Event) => {
+      e.stopPropagation();
+      e.preventDefault();
+      this.close();
+      this.performLogout();
+    };
+    this.logoutBtn.addEventListener('pointerup', onLogout);
+    this.logoutBtn.addEventListener('click', onLogout);
+
     this.menuDropdown.appendChild(this.fullscreenBtn);
     this.menuDropdown.appendChild(this.hideUiBtn);
     this.menuDropdown.appendChild(this.musicBtn);
+    this.menuDropdown.appendChild(this.adminLoginBtn);
+    this.menuDropdown.appendChild(this.logoutBtn);
 
     const onTrigger = (e: Event) => {
       e.stopPropagation();
@@ -198,6 +257,40 @@ export class ControlMenu {
     container.appendChild(triggerBtn);
 
     return container;
+  }
+
+  private updateRoleView(): void {
+    const role = this.tourState.getRole();
+    const isAdmin = role === 'admin';
+    if (this.logoutLabel) {
+      this.logoutLabel.textContent = isAdmin ? 'Admin Logout' : 'Logout';
+    }
+    if (this.adminLoginBtn) {
+      this.adminLoginBtn.style.display = isAdmin ? 'none' : 'flex';
+    }
+  }
+
+  private async performLogout(): Promise<void> {
+    const wasAdmin = this.tourState.getRole() === 'admin';
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch {}
+
+    try {
+      sessionStorage.removeItem('tourTabAuthenticated');
+      sessionStorage.removeItem('tourRole');
+    } catch {}
+
+    if (wasAdmin) {
+      try {
+        sessionStorage.setItem('openAdminOnLoad', 'true');
+      } catch {}
+    }
+
+    window.location.reload();
   }
 
   private createRestorePill(): HTMLElement {

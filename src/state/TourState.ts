@@ -8,7 +8,8 @@ export type TourEventType =
   | 'modalChange'
   | 'audioChange'
   | 'fullscreenChange'
-  | 'gallerySelect';
+  | 'gallerySelect'
+  | 'authRoleChange';
 
 export type ModalType = 'none' | 'contact' | 'location' | 'gallery' | 'lightbox';
 
@@ -26,6 +27,7 @@ export interface TourStateData {
   cameraYaw: number;
   cameraPitch: number;
   cameraFov: number;
+  userRole: 'user' | 'admin' | null;
 }
 
 export type StateListener = (state: TourStateData) => void;
@@ -52,7 +54,8 @@ export class TourState {
       isFullscreen: false,
       cameraYaw: -(config.rooms[config.defaultRoomId]?.initialCamera.yaw ?? 0),
       cameraPitch: config.rooms[config.defaultRoomId]?.initialCamera.pitch ?? 0,
-      cameraFov: config.rooms[config.defaultRoomId]?.initialCamera.fov ?? 75
+      cameraFov: config.rooms[config.defaultRoomId]?.initialCamera.fov ?? 75,
+      userRole: null
     };
   }
 
@@ -179,6 +182,17 @@ export class TourState {
   public setFullscreen(isFullscreen: boolean): void {
     this.data.isFullscreen = isFullscreen;
     this.emit('fullscreenChange');
+  }
+
+  public setRole(role: 'user' | 'admin' | null): void {
+    if (this.data.userRole !== role) {
+      this.data.userRole = role;
+      this.emit('authRoleChange');
+    }
+  }
+
+  public getRole(): 'user' | 'admin' | null {
+    return this.data.userRole;
   }
 }
 

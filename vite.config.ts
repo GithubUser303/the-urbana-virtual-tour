@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   handleVerifyCode,
+  handleAdminLogin,
   isAuthenticatedRequest,
   inspectVisitorSession,
   isAdminRequest,
@@ -163,15 +164,47 @@ function urbanaAuthDevPlugin(): Plugin {
           return;
         }
 
+        // 8b. ADMIN API: Username + Password Login for Tour
+        if (pathname === '/api/auth/admin-login' && req.method === 'POST') {
+          const body = await readJsonBody();
+          const username = (body?.username || '').toString().trim();
+          const password = (body?.password || '').toString();
+
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'no-store');
+
+          if (!username || !password) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ success: false, error: 'Please provide both username and password.' }));
+            return;
+          }
+
+          const result = handleAdminLogin(username, password, clientIp);
+          if (result.success) {
+            const cookieHeader = `urbana_session=${result.token}; Path=/; HttpOnly; SameSite=Lax`;
+            res.setHeader('Set-Cookie', cookieHeader);
+            res.statusCode = 200;
+            res.end(JSON.stringify({ success: true, role: 'admin' }));
+          } else {
+            res.statusCode = result.statusCode || 401;
+            res.end(JSON.stringify({ success: false, error: result.error || 'Invalid username or password.' }));
+          }
+          return;
+        }
+
         // 9. VISITOR API: Check Auth Status
         if (pathname === '/api/auth/status' && req.method === 'GET') {
           const inspection = inspectVisitorSession(req.headers.cookie);
           res.setHeader('Content-Type', 'application/json');
           res.setHeader('Cache-Control', 'no-store');
           if (inspection.valid) {
-            res.end(JSON.stringify({ authenticated: true }));
+            res.end(JSON.stringify({ authenticated: true, role: inspection.role || 'user' }));
           } else {
-            res.end(JSON.stringify({ authenticated: false, expired: !!inspection.expired }));
+            res.end(JSON.stringify({
+              authenticated: false,
+              role: inspection.role || null,
+              expired: !!inspection.expired
+            }));
           }
           return;
         }
@@ -196,7 +229,7 @@ function urbanaAuthDevPlugin(): Plugin {
             const cookieHeader = `urbana_session=${result.token}; Path=/; HttpOnly; SameSite=Lax`;
             res.setHeader('Set-Cookie', cookieHeader);
             res.statusCode = 200;
-            res.end(JSON.stringify({ success: true }));
+            res.end(JSON.stringify({ success: true, role: 'user' }));
           } else {
             const isRateLimited = (result.error || '').toLowerCase().includes('too many');
             res.statusCode = isRateLimited ? 429 : 401;
@@ -208,7 +241,10 @@ function urbanaAuthDevPlugin(): Plugin {
         // 11. VISITOR API: Logout
         if (pathname === '/api/auth/logout' && req.method === 'POST') {
           res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Set-Cookie', 'urbana_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+          res.setHeader('Set-Cookie', [
+            'urbana_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+            'urbana_admin_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'
+          ]);
           res.end(JSON.stringify({ success: true }));
           return;
         }

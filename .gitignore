@@ -6,6 +6,7 @@ node_modules/
 # Production build output
 dist/
 dist-ssr/
+scratch/
 
 # Logs
 npm-debug.log*
@@ -35,4 +36,5 @@ server/.*secret*
 server/.totp_secret
 server/.session_secret
 server/.admin_key
+server/.admin_*
 server/.totp_enrolled
