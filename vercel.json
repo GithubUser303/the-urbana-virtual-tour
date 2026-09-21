@@ -1,0 +1,7 @@
+{
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/admin/setup", "destination": "/api/admin/setup" },
+    { "source": "/admin", "destination": "/api/admin/setup" }
+  ]
+}

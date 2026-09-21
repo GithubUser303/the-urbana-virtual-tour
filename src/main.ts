@@ -52,7 +52,8 @@ export class TourApp {
     try {
       const res = await fetch('/api/auth/status', {
         method: 'GET',
-        headers: { 'Cache-Control': 'no-cache' }
+        headers: { 'Cache-Control': 'no-cache', 'Accept': 'application/json' },
+        credentials: 'include'
       });
       const data = await res.json();
 

@@ -135,29 +135,80 @@ export class AuthGate {
     this.setLoading(true);
     this.clearError();
 
+    const endpoint = '/api/auth/verify';
+    let response: Response;
+
     try {
-      const response = await fetch('/api/auth/verify', {
+      response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({ code })
       });
+    } catch (networkError) {
+      // Genuine network/DNS/offline failure
+      if (import.meta.env.DEV) {
+        console.warn(`[AuthGate] Network failure calling ${endpoint}:`, networkError);
+      }
+      this.showError('Unable to connect to authentication service. Please try again.');
+      this.isVerifying = false;
+      this.setLoading(false);
+      return;
+    }
 
-      const data = await response.json();
+    try {
+      let data: any = null;
+      try {
+        const text = await response.text();
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = {};
+      }
 
-      if (response.ok && data.success) {
+      if (import.meta.env.DEV) {
+        console.log(`[AuthGate] Response from ${endpoint}:`, {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get('content-type'),
+          success: data?.success,
+          errorId: data?.error
+        });
+      }
+
+      if (response.ok && data?.success) {
         this.handleSuccess();
-      } else {
-        const errorMsg =
-          data.error || 'Invalid authentication code. Please try again.';
-        this.showError(errorMsg);
+        return;
+      }
+
+      // Handle 429 Rate Limit
+      if (response.status === 429) {
+        const msg = data?.error || 'Too many failed attempts. Please wait a moment and try again.';
+        this.showError(msg);
+        this.triggerCardShake();
+        return;
+      }
+
+      // Handle 400 / 401 Invalid Code
+      if (response.status === 400 || response.status === 401) {
+        const msg = data?.error || 'Invalid or expired authentication code.';
+        this.showError(msg);
         this.triggerCardShake();
         this.input.select();
+        return;
       }
-    } catch (err) {
-      console.error('Authentication request failed:', err);
-      this.showError('Connection error. Please check your network and try again.');
+
+      // 5xx Server Error or unexpected status
+      const msg = data?.error || 'Unable to connect to authentication service. Please try again.';
+      this.showError(msg);
+      this.triggerCardShake();
+    } catch (parseError) {
+      if (import.meta.env.DEV) {
+        console.error('[AuthGate] Error handling response:', parseError);
+      }
+      this.showError('Unable to connect to authentication service. Please try again.');
     } finally {
       this.isVerifying = false;
       this.setLoading(false);

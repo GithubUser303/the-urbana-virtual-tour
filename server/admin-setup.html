@@ -402,7 +402,7 @@
 
     async function checkStatus() {
       try {
-        const res = await fetch('/api/admin/status');
+        const res = await fetch('/api/admin/status', { credentials: 'include' });
         const data = await res.json();
         if (data.isAdmin) {
           loadSetupData();
@@ -417,7 +417,8 @@
     async function loadSetupData(forceReset = false) {
       try {
         const res = await fetch(forceReset ? '/api/admin/reset' : '/api/admin/setup-data', {
-          method: forceReset ? 'POST' : 'GET'
+          method: forceReset ? 'POST' : 'GET',
+          credentials: 'include'
         });
         const data = await res.json();
 
@@ -445,6 +446,7 @@
         const res = await fetch('/api/admin/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ password })
         });
         const data = await res.json();
@@ -482,6 +484,7 @@
         const res = await fetch('/api/admin/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ code })
         });
         const data = await res.json();
@@ -510,6 +513,7 @@
         const res = await fetch('/api/admin/test-code', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ code })
         });
         const data = await res.json();
@@ -542,7 +546,7 @@
     });
 
     document.getElementById('btn-logout').addEventListener('click', async () => {
-      await fetch('/api/admin/logout', { method: 'POST' });
+      await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
       window.location.reload();
     });
 
@@ -550,3 +554,4 @@
   </script>
 </body>
 </html>
+

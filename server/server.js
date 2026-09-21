@@ -172,17 +172,18 @@ const server = http.createServer(async (req, res) => {
   // 10. VISITOR API: Verify TOTP Code
   if (pathname === '/api/auth/verify' && req.method === 'POST') {
     const body = await parseJsonBody(req);
-    if (!body || !body.code) {
+    if (!body || !body.code || body.code.toString().trim().length !== 6) {
       return sendJson(res, 400, {
         success: false,
-        error: 'Please enter a valid 6-digit authentication code.'
+        error: 'Please enter a complete 6-digit code.'
       });
     }
 
-    const result = handleVerifyCode(body.code, clientIp);
+    const result = handleVerifyCode(body.code.toString().trim(), clientIp);
 
     if (result.success) {
-      const cookieHeader = `urbana_session=${result.token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(
+      const isSecure = process.env.NODE_ENV === 'production' || req.headers['x-forwarded-proto'] === 'https';
+      const cookieHeader = `urbana_session=${result.token}; Path=/; HttpOnly; SameSite=Lax; ${isSecure ? 'Secure; ' : ''}Max-Age=${Math.floor(
         SESSION_DURATION_MS / 1000
       )}`;
       return sendJson(
@@ -192,7 +193,9 @@ const server = http.createServer(async (req, res) => {
         { 'Set-Cookie': cookieHeader }
       );
     } else {
-      return sendJson(res, 401, { success: false, error: result.error });
+      const isRateLimited = (result.error || '').toLowerCase().includes('too many');
+      const statusCode = isRateLimited ? 429 : 401;
+      return sendJson(res, statusCode, { success: false, error: result.error });
     }
   }
 

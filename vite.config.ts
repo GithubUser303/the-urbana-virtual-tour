@@ -174,10 +174,17 @@ function urbanaAuthDevPlugin(): Plugin {
         // 10. VISITOR API: Verify TOTP Code
         if (pathname === '/api/auth/verify' && req.method === 'POST') {
           const body = await readJsonBody();
-          const result = handleVerifyCode(body?.code, clientIp);
-
+          const code = (body?.code || '').toString().trim();
           res.setHeader('Content-Type', 'application/json');
           res.setHeader('Cache-Control', 'no-store');
+
+          if (!code || code.length !== 6) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ success: false, error: 'Please enter a complete 6-digit code.' }));
+            return;
+          }
+
+          const result = handleVerifyCode(code, clientIp);
 
           if (result.success) {
             const cookieHeader = `urbana_session=${result.token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(
@@ -187,7 +194,8 @@ function urbanaAuthDevPlugin(): Plugin {
             res.statusCode = 200;
             res.end(JSON.stringify({ success: true }));
           } else {
-            res.statusCode = 401;
+            const isRateLimited = (result.error || '').toLowerCase().includes('too many');
+            res.statusCode = isRateLimited ? 429 : 401;
             res.end(JSON.stringify({ success: false, error: result.error }));
           }
           return;
