@@ -5,7 +5,9 @@
  */
 export class AuthGate {
   private element: HTMLElement;
+  private inputContainer!: HTMLElement;
   private input!: HTMLInputElement;
+  private slots: HTMLElement[] = [];
   private errorElement!: HTMLElement;
   private submitBtn!: HTMLButtonElement;
   private spinnerElement!: HTMLElement;
@@ -17,6 +19,8 @@ export class AuthGate {
     this.onSuccess = onSuccess;
     this.element = this.createElement();
     document.body.appendChild(this.element);
+
+    this.updateSlots();
 
     if (initialMessage) {
       this.showError(initialMessage);
@@ -31,7 +35,10 @@ export class AuthGate {
         /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
 
     if (!isMobile) {
-      setTimeout(() => this.input.focus(), 250);
+      setTimeout(() => {
+        this.input.focus();
+        this.updateSlots();
+      }, 250);
     }
   }
 
@@ -64,12 +71,19 @@ export class AuthGate {
             pattern="[0-9]*"
             autocomplete="one-time-code"
             maxlength="6"
-            placeholder="• • • • • •"
-            class="auth-input"
+            class="auth-input-hidden"
             aria-label="6-digit TOTP authentication code"
             required
             spellcheck="false"
           />
+          <div class="auth-otp-track" aria-hidden="true">
+            <div class="auth-otp-slot" data-index="0"><span class="auth-otp-dot"></span><span class="auth-otp-caret"></span></div>
+            <div class="auth-otp-slot" data-index="1"><span class="auth-otp-dot"></span><span class="auth-otp-caret"></span></div>
+            <div class="auth-otp-slot" data-index="2"><span class="auth-otp-dot"></span><span class="auth-otp-caret"></span></div>
+            <div class="auth-otp-slot" data-index="3"><span class="auth-otp-dot"></span><span class="auth-otp-caret"></span></div>
+            <div class="auth-otp-slot" data-index="4"><span class="auth-otp-dot"></span><span class="auth-otp-caret"></span></div>
+            <div class="auth-otp-slot" data-index="5"><span class="auth-otp-dot"></span><span class="auth-otp-caret"></span></div>
+          </div>
         </div>
 
         <div class="auth-error-msg" aria-live="polite"></div>
@@ -84,7 +98,9 @@ export class AuthGate {
     backdrop.appendChild(bg);
     backdrop.appendChild(card);
 
-    this.input = card.querySelector('.auth-input')!;
+    this.inputContainer = card.querySelector('.auth-input-container')!;
+    this.input = card.querySelector('.auth-input-hidden')!;
+    this.slots = Array.from(card.querySelectorAll<HTMLElement>('.auth-otp-slot'));
     this.errorElement = card.querySelector('.auth-error-msg')!;
     this.submitBtn = card.querySelector('.auth-verify-btn')!;
     this.btnTextElement = card.querySelector('.auth-btn-text')!;
@@ -93,12 +109,48 @@ export class AuthGate {
     return backdrop;
   }
 
+  private updateSlots(): void {
+    const val = this.input.value;
+    const len = val.length;
+    const isFocused = document.activeElement === this.input;
+
+    if (isFocused) {
+      this.inputContainer.classList.add('is-focused');
+    } else {
+      this.inputContainer.classList.remove('is-focused');
+    }
+
+    this.slots.forEach((slot, index) => {
+      slot.classList.remove('filled', 'active');
+      if (index < len) {
+        slot.classList.add('filled');
+      } else if (index === len && isFocused && len < 6) {
+        slot.classList.add('active');
+      }
+    });
+  }
+
   private bindEvents(): void {
-    // Sanitize input to digits only & handle formatting
+    // Tapping container focuses hidden input
+    this.inputContainer.addEventListener('click', () => {
+      this.input.focus();
+      this.updateSlots();
+    });
+
+    this.input.addEventListener('focus', () => {
+      this.updateSlots();
+    });
+
+    this.input.addEventListener('blur', () => {
+      this.updateSlots();
+    });
+
+    // Sanitize input to digits only & update visual slots immediately
     this.input.addEventListener('input', () => {
       const sanitized = this.input.value.replace(/\D/g, '').slice(0, 6);
       this.input.value = sanitized;
       this.clearError();
+      this.updateSlots();
 
       // Auto-submit when all 6 digits are typed or pasted
       if (sanitized.length === 6 && !this.isVerifying) {
@@ -113,6 +165,7 @@ export class AuthGate {
       const sanitized = pasteData.replace(/\D/g, '').slice(0, 6);
       this.input.value = sanitized;
       this.clearError();
+      this.updateSlots();
 
       if (sanitized.length === 6 && !this.isVerifying) {
         this.verifyCode(sanitized);
@@ -128,6 +181,7 @@ export class AuthGate {
       if (code.length !== 6) {
         this.showError('Please enter a complete 6-digit code.');
         this.input.focus();
+        this.updateSlots();
         return;
       }
       this.verifyCode(code);

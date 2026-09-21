@@ -87,32 +87,120 @@
 }
 
 .auth-input-container {
-  width: 100%;
-  margin-bottom: 12px;
-}
-
-.auth-input {
+  position: relative;
   width: 100%;
   height: 56px;
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 18px;
-  color: #ffffff;
-  font-family: monospace, -apple-system, sans-serif;
-  font-size: clamp(1.4rem, 4vw, 1.8rem);
-  font-weight: 600;
-  text-align: center;
-  letter-spacing: clamp(8px, 1.6vw, 14px);
-  outline: none;
   box-sizing: border-box;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: text;
   transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
-.auth-input:focus {
+.auth-input-container:focus-within,
+.auth-input-container.is-focused {
   border-color: rgba(226, 185, 111, 0.65);
   background: rgba(0, 0, 0, 0.6);
   box-shadow: 0 0 0 3px rgba(226, 185, 111, 0.2), 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Transparent native input that captures typing, focus, and mobile keypad */
+.auth-input-hidden {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  color: transparent;
+  background: transparent;
+  border: none;
+  outline: none;
+  caret-color: transparent;
+  -webkit-text-fill-color: transparent;
+  z-index: 3;
+  cursor: text;
+}
+
+/* Precision 6-column OTP grid mathematically centered horizontally & vertically */
+.auth-otp-track {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  width: min(240px, 80%);
+  height: 100%;
+  margin: 0 auto;
+  pointer-events: none;
+}
+
+.auth-otp-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Fixed geometry visual dots */
+.auth-otp-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transform: scale(0.92);
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.2s ease;
+}
+
+/* Filled dot state */
+.auth-otp-slot.filled .auth-otp-dot {
+  background-color: var(--accent-gold, #e2b96f);
+  box-shadow: 0 0 10px rgba(226, 185, 111, 0.75), 0 0 2px #ffffff;
+  transform: scale(1.15);
+  opacity: 1;
+}
+
+/* Custom glowing gold caret */
+.auth-otp-caret {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 20px;
+  background-color: var(--accent-gold, #e2b96f);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(226, 185, 111, 0.7);
+}
+
+/* Active caret visible when slot is active and input is focused */
+.auth-input-container.is-focused .auth-otp-slot.active .auth-otp-caret {
+  display: block;
+  animation: otpCaretBlink 1s ease-in-out infinite;
+}
+
+/* Hide the placeholder dot in active slot so caret is cleanly centered */
+.auth-input-container.is-focused .auth-otp-slot.active .auth-otp-dot {
+  opacity: 0;
+}
+
+@keyframes otpCaretBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 .auth-error-msg {
