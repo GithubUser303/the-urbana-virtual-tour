@@ -29,12 +29,7 @@ desktop.ini
 *.sln
 *.sw?
 
-# Local environment & secret files
+# Local environment
 .env
 .env*.local
-server/.*secret*
-server/.totp_secret
-server/.session_secret
-server/.admin_key
-server/.admin_*
-server/.totp_enrolled
+
